@@ -12,7 +12,7 @@
 
 importScripts("idb-lite.js");
 
-var CACHE_VERSION = "2026-09-19-2014";
+var CACHE_VERSION = "2026-09-19-2033";
 var CACHE = "health-shell-" + CACHE_VERSION;
 
 var ASSETS = [

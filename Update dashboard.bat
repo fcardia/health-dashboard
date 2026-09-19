@@ -8,7 +8,7 @@ echo.
 rem Optional: uncomment and point this at your Google Drive for Desktop folder.
 rem data.json is copied there on every build, so the phone app can pick it up
 rem straight from the Drive app. Leave it commented out to skip the copy.
-rem set HEALTH_DRIVE_DIR=G:\My Drive\health
+set HEALTH_DRIVE_DIR=G:\Il mio Drive\health
 
 set PY=python
 where python >nul 2>nul || set PY=py
