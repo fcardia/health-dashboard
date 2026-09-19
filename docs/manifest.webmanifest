@@ -1,6 +1,6 @@
 {
-  "name": "Smartwatch Health Dashboard",
-  "short_name": "Health",
+  "name": "MyData",
+  "short_name": "MyData",
   "description": "Your Zepp weekly exports, charted. Import data.json to update.",
   "id": "./",
   "start_url": "./",

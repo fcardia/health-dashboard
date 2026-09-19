@@ -4,7 +4,7 @@
      1. cache the shell so the app opens offline (the data itself lives in
         IndexedDB, not here - nothing personal is ever put in the cache);
      2. receive a shared data.json from the Android share sheet and store it,
-        so "Drive -> Share -> Health Dashboard" updates the app in one gesture.
+        so "Drive -> Share -> MyData" updates the app in one gesture.
 
    CACHE_VERSION is rewritten by build_dashboard.py on every build, which is
    what retires the previous cache. */

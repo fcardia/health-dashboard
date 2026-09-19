@@ -57,19 +57,26 @@ icon, runs full-screen and works offline.
 **One-time setup.** Publish the `docs/` folder with GitHub Pages (Settings -> Pages
 -> Deploy from a branch -> `main` + `/docs`; that folder name is the one Pages
 offers, which is why it is called that). `docs/` holds only the shell (charts,
-layout, code) and never any of your data, so the repo can be public. The `.gitignore` here already
-blocks `w_*/`, `data.json` and `dashboard.html`; check `git status` before your
-first push anyway. Then open the Pages URL on the phone and add it to the home
+layout, code) and never any of your data, so the repo can be public. The
+`.gitignore` here already blocks `w_*/`, `data.json` and `dashboard.html`; check
+`git status` before your first push anyway. Then open the Pages URL on the phone and add it to the home
 screen.
 
 **Every week, after running the `.bat`:**
 
-1. Get `data.json` to the phone. Uncomment `HEALTH_DRIVE_DIR` in
-   **Update dashboard.bat** and point it at your Google Drive for Desktop
-   folder — the build then drops `data.json` there and Drive syncs it by itself.
+1. Open **drive.google.com** and drag `data.json` in. When it asks, choose
+   *upload as a new version* rather than *keep both*, or you end up with
+   `data.json (1)` and no idea which one is current.
 2. Open the app and tap **Import**. Android's file picker lists Google Drive as
    a source, so you can take the file straight from there. Or, from the Drive
-   app, use **Share → Health Dashboard** and skip the picker entirely.
+   app, use **Share → MyData** and skip the picker entirely.
+
+`Update dashboard.bat` can copy `data.json` into a Google Drive for Desktop
+folder for you (`HEALTH_DRIVE_DIR`, commented out at the top). It is off
+deliberately: on this machine Drive for Desktop has the whole Desktop — around
+235k files — queued for upload, so anything dropped into `G:` waits behind that
+backlog instead of reaching the cloud. Uploading from the browser goes straight
+out and takes a second. Re-enable the line only once that queue is healthy.
 
 The data is then stored on the phone, so the app opens offline and keeps working
 until the next import. The footer always shows when the data was built and when

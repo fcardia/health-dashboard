@@ -5,10 +5,13 @@ echo.
 echo  Rebuilding the health dashboard from every w_* folder here...
 echo.
 
-rem Optional: uncomment and point this at your Google Drive for Desktop folder.
-rem data.json is copied there on every build, so the phone app can pick it up
-rem straight from the Drive app. Leave it commented out to skip the copy.
-set HEALTH_DRIVE_DIR=G:\Il mio Drive\health
+rem Optional: point this at a Google Drive for Desktop folder and data.json is
+rem copied there on every build. Left off on purpose - on this machine Drive for
+rem Desktop has the whole Desktop (~235k files) queued for upload, so anything
+rem dropped in G: sits in that backlog for hours instead of reaching the cloud.
+rem Upload data.json from drive.google.com in the browser instead. Re-enable
+rem this line only once Drive's queue is actually healthy.
+rem set HEALTH_DRIVE_DIR=G:\Il mio Drive\health-dashboard
 
 set PY=python
 where python >nul 2>nul || set PY=py
