@@ -6,13 +6,14 @@ Weekly Zepp / Mi Fit exports, plus a dashboard built from all of them at once.
 personal_data/
 ├── dashboard.html          <- open this (double-click)
 ├── Update dashboard.bat    <- run this after adding a week
-├── data.json               <- the same data on its own, for the phone app
-├── w_0609_1309/            <- one folder per weekly export
-│   ├── ACTIVITY/  ACTIVITY_MINUTE/  ACTIVITY_STAGE/
-│   ├── HEARTRATE/ HEARTRATE_AUTO/
-│   ├── SLEEP/     SLEEP_MINUTE/
-│   ├── SPORT/     BODY/  HEALTH_DATA/  USER/
-│   └── ...
+├── data/                   <- everything personal, all of it git-ignored
+│   ├── w_0609_1309/        <- one folder per weekly export
+│   │   ├── ACTIVITY/  ACTIVITY_MINUTE/  ACTIVITY_STAGE/
+│   │   ├── HEARTRATE/ HEARTRATE_AUTO/
+│   │   ├── SLEEP/     SLEEP_MINUTE/
+│   │   ├── SPORT/     BODY/  HEALTH_DATA/  USER/
+│   │   └── ...
+│   └── data.json           <- the same data on its own, for the phone app
 ├── docs/                   <- the installable web app (generated; safe to publish)
 ├── README.md
 └── _build/
@@ -28,8 +29,9 @@ one, loaded from the phone's own storage for the app.
 
 ## Adding a week
 
-1. Export the new week from Zepp and drop the folder in here, named
-   `w_DDMM_DDMM` — the same shape as `w_0609_1309`.
+1. Export the new week from Zepp and drop the folder into `data/`, named
+   `w_DDMM_DDMM` — the same shape as `w_0609_1309`. (A folder left in the
+   project root is still picked up, and the build says so.)
 2. Double-click **Update dashboard.bat**.
 3. `dashboard.html` is rewritten with every week merged in, and opens.
 
@@ -64,7 +66,7 @@ screen.
 
 **Every week, after running the `.bat`:**
 
-1. Open **drive.google.com** and drag `data.json` in. When it asks, choose
+1. Open **drive.google.com** and drag `data/data.json` in. When it asks, choose
    *upload as a new version* rather than *keep both*, or you end up with
    `data.json (1)` and no idea which one is current.
 2. Open the app and tap **Import**. Android's file picker lists Google Drive as

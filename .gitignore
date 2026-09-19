@@ -4,11 +4,15 @@
 # Only the shell in docs/ and the sources in _build/ are safe to publish.
 # ---------------------------------------------------------------------------
 
-# Raw Zepp exports - one folder per week
+# Everything personal lives here: the raw Zepp exports and the payload built
+# from them. One line covers the lot.
+data/
+
+# A weekly export dropped in the root instead of data/ - still built, still
+# never published.
 w_*/
 
-# Built artefacts containing the data itself
-data.json
+# Built from the data, so it carries all of it
 dashboard.html
 
 # Belt and braces: never publish a CSV from anywhere in here

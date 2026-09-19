@@ -47,7 +47,11 @@ APP_SRC = os.path.join(BUILD, "app")
 # Named "docs" because GitHub Pages can only serve a branch's root or /docs -
 # no other folder name is offered. Nothing to configure beyond picking it.
 APP_DIR = os.path.join(ROOT, "docs")
-DATA_OUT = os.path.join(ROOT, "data.json")
+# Everything that is actually data lives here: the raw weekly exports and the
+# payload built from them. Kept out of the root so the root holds only the
+# things you open or run. Never published - see .gitignore.
+DATA_DIR = os.path.join(ROOT, "data")
+DATA_OUT = os.path.join(DATA_DIR, "data.json")
 APP_ASSETS = ("data-loader.js", "idb-lite.js", "manifest.webmanifest",
               "icon-192.png", "icon-512.png", "icon.svg")
 
@@ -204,11 +208,22 @@ def first_date(path):
 
 
 def find_weeks():
-    out = []
-    for name in sorted(os.listdir(ROOT)):
-        full = os.path.join(ROOT, name)
-        if os.path.isdir(full) and WEEK_RE.match(name):
-            out.append({"folder": name, "path": full, "first": first_date(full) or "9999"})
+    """Weekly export folders, from data/ first and then the root.
+
+    The root is still scanned so an export dropped in the old place keeps
+    working; a folder present in both is taken from data/ only.
+    """
+    out, seen = [], set()
+    for base in (DATA_DIR, ROOT):
+        if not os.path.isdir(base):
+            continue
+        for name in sorted(os.listdir(base)):
+            full = os.path.join(base, name)
+            if name in seen or not os.path.isdir(full) or not WEEK_RE.match(name):
+                continue
+            seen.add(name)
+            out.append({"folder": name, "path": full, "stray": base is ROOT,
+                        "first": first_date(full) or "9999"})
     out.sort(key=lambda w: (w["first"], w["folder"]))
     return out
 
@@ -764,8 +779,10 @@ def write_app(html, blob, stamp):
 
     lines = ["App shell  : %s  (cache %s)" % (APP_DIR, stamp)]
 
-    # data.json stays OUT of app/ on purpose: app/ is the folder that gets
-    # published, and this is the file with every heartbeat in it.
+    # data.json stays OUT of the published folder on purpose: this is the file
+    # with every heartbeat in it.
+    if not os.path.isdir(DATA_DIR):
+        os.makedirs(DATA_DIR)
     with io.open(DATA_OUT, "w", encoding="utf-8") as fh:
         fh.write(blob)
     lines.append("Data file  : %s  (%.0f KB)"
@@ -783,7 +800,7 @@ def write_app(html, blob, stamp):
 def main():
     weeks = find_weeks()
     if not weeks:
-        sys.stderr.write("No week folders (w_DDMM_DDMM) found in %s\n" % ROOT)
+        sys.stderr.write("No week folders (w_DDMM_DDMM) found in %s\n" % DATA_DIR)
         return 1
 
     st = Store()
@@ -881,6 +898,10 @@ def main():
     app_lines = write_app(html, blob, stamp)
 
     print("Exports    : %d (%s)" % (len(weeks), ", ".join(w["folder"] for w in weeks)))
+    stray = [w["folder"] for w in weeks if w.get("stray")]
+    if stray:
+        print("             ^ still in the project root, move to data\\: %s"
+              % ", ".join(stray))
     print("Days       : %d  %s -> %s" % (len(days), days[0]["date"], days[-1]["date"]))
     print("Nights     : %d   Workouts: %d   Rows: %d"
           % (len(nights), len(sports_local), payload["totals"]["records"]))
