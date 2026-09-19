@@ -1,0 +1,2237 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#f9f9f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d0d0d" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Smartwatch Health Dashboard</title>
+<style>
+/* ---------- tokens (light is the base; dark redefines only the values) ---- */
+:root{
+  color-scheme: light;
+  --plane:#f9f9f7;
+  --surface-1:#fcfcfb;
+  --surface-2:#f2f1ee;
+  --text-primary:#0b0b0b;
+  --text-secondary:#52514e;
+  --text-muted:#898781;
+  --grid:#e1e0d9;
+  --axis:#c3c2b7;
+  --border:rgba(11,11,11,.10);
+  --shadow:0 1px 2px rgba(11,11,11,.04);
+
+  --s1:#2a78d6;  /* blue    - steps / primary */
+  --s2:#eb6834;  /* orange  - calories */
+  --s3:#1baf7a;  /* aqua    - distance */
+  --s4:#eda100;  /* yellow  */
+  --s5:#e87ba4;  /* magenta */
+  --s6:#008300;  /* green   */
+  --s7:#4a3aa7;  /* violet  */
+  --s8:#e34948;  /* red     */
+
+  /* blue ordinal ramp (sleep depth, HR zones) - light steps */
+  --o1:#86b6ef; --o2:#5598e7; --o3:#2a78d6; --o4:#1c5cab; --o5:#104281;
+  /* sleep stages */
+  --sleep-deep:#184f95; --sleep-rem:#2a78d6; --sleep-light:#86b6ef; --sleep-wake:#b6b4ac;
+
+  --good:#0ca30c; --warning:#fab219; --serious:#ec835a; --critical:#d03b3b;
+  --good-text:#006300;
+
+  --heat-0:#eeede9;
+  --heat-1:#cde2fb; --heat-2:#9ec5f4; --heat-3:#6da7ec;
+  --heat-4:#3987e5; --heat-5:#256abf; --heat-6:#104281;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --plane:#0d0d0d;
+    --surface-1:#1a1a19;
+    --surface-2:#232322;
+    --text-primary:#ffffff;
+    --text-secondary:#c3c2b7;
+    --text-muted:#898781;
+    --grid:#2c2c2a;
+    --axis:#383835;
+    --border:rgba(255,255,255,.10);
+    --shadow:none;
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
+    --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
+    --o1:#cde2fb; --o2:#86b6ef; --o3:#3987e5; --o4:#256abf; --o5:#184f95;
+    --sleep-deep:#1c5cab; --sleep-rem:#3987e5; --sleep-light:#9ec5f4; --sleep-wake:#6b6a64;
+    --good-text:#0ca30c;
+    --heat-0:#232322;
+    --heat-1:#184f95; --heat-2:#256abf; --heat-3:#2a78d6;
+    --heat-4:#5598e7; --heat-5:#9ec5f4; --heat-6:#cde2fb;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --plane:#0d0d0d;
+  --surface-1:#1a1a19;
+  --surface-2:#232322;
+  --text-primary:#ffffff;
+  --text-secondary:#c3c2b7;
+  --text-muted:#898781;
+  --grid:#2c2c2a;
+  --axis:#383835;
+  --border:rgba(255,255,255,.10);
+  --shadow:none;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
+  --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
+  --o1:#cde2fb; --o2:#86b6ef; --o3:#3987e5; --o4:#256abf; --o5:#184f95;
+  --sleep-deep:#1c5cab; --sleep-rem:#3987e5; --sleep-light:#9ec5f4; --sleep-wake:#6b6a64;
+  --good-text:#0ca30c;
+  --heat-0:#232322;
+  --heat-1:#184f95; --heat-2:#256abf; --heat-3:#2a78d6;
+  --heat-4:#5598e7; --heat-5:#9ec5f4; --heat-6:#cde2fb;
+}
+
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html,body{margin:0;padding:0}
+body{
+  background:var(--plane);
+  color:var(--text-primary);
+  font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{margin:0;font-weight:600;letter-spacing:-.01em}
+a{color:var(--s1)}
+
+.wrap{max-width:1240px;margin:0 auto;padding:20px 20px 64px}
+
+/* ---------- header ---------- */
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;gap:16px;margin-bottom:18px}
+header.top .who{flex:1 1 300px;min-width:0}
+header.top h1{font-size:22px}
+header.top .sub{color:var(--text-secondary);font-size:13px;margin-top:3px}
+.iconbtn{
+  appearance:none;border:1px solid var(--border);background:var(--surface-1);
+  color:var(--text-secondary);border-radius:8px;padding:7px 12px;font:inherit;
+  font-size:13px;cursor:pointer;white-space:nowrap;
+}
+.iconbtn:hover{background:var(--surface-2);color:var(--text-primary)}
+
+/* ---------- tabs ---------- */
+nav.tabs{display:flex;gap:2px;flex-wrap:wrap;border-bottom:1px solid var(--border);margin-bottom:16px}
+nav.tabs button{
+  appearance:none;background:none;border:0;border-bottom:2px solid transparent;
+  color:var(--text-secondary);font:inherit;font-size:13.5px;font-weight:500;
+  padding:9px 13px;cursor:pointer;margin-bottom:-1px;border-radius:6px 6px 0 0;
+}
+nav.tabs button:hover{color:var(--text-primary);background:var(--surface-2)}
+nav.tabs button[aria-selected="true"]{color:var(--text-primary);border-bottom-color:var(--s1)}
+
+/* ---------- filter row ---------- */
+.filters{
+  display:flex;flex-wrap:wrap;align-items:center;gap:10px;
+  padding:10px 12px;background:var(--surface-1);border:1px solid var(--border);
+  border-radius:10px;margin-bottom:16px;
+}
+.filters .lbl{font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em}
+.seg{display:flex;gap:2px;background:var(--surface-2);border-radius:8px;padding:2px}
+.seg button{
+  appearance:none;border:0;background:none;color:var(--text-secondary);
+  font:inherit;font-size:13px;padding:5px 11px;border-radius:6px;cursor:pointer;
+}
+.seg button:hover{color:var(--text-primary)}
+.seg button[aria-pressed="true"]{background:var(--surface-1);color:var(--text-primary);
+  font-weight:600;box-shadow:var(--shadow)}
+select.ctl,input.ctl{
+  appearance:auto;font:inherit;font-size:13px;padding:5px 8px;border-radius:7px;
+  border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);
+}
+.filters .spacer{flex:1}
+.filters .scope{font-size:12.5px;color:var(--text-muted);font-variant-numeric:tabular-nums}
+
+/* ---------- grid + cards ---------- */
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px;margin-bottom:14px}
+.c3{grid-column:span 3}.c4{grid-column:span 4}.c5{grid-column:span 5}
+.c6{grid-column:span 6}.c7{grid-column:span 7}.c8{grid-column:span 8}
+.c9{grid-column:span 9}.c12{grid-column:span 12}
+@media (max-width:1000px){
+  .c3{grid-column:span 6}.c4{grid-column:span 6}.c5{grid-column:span 12}
+  .c6{grid-column:span 12}.c7{grid-column:span 12}.c8{grid-column:span 12}
+  .c9{grid-column:span 12}
+}
+@media (max-width:560px){
+  .c3{grid-column:span 12}.c4{grid-column:span 12}
+
+  /* tighter gutters - 40px of a 375px screen is a lot to give away */
+  .wrap{padding:12px 12px 48px}
+  .grid{gap:10px;margin-bottom:10px}
+  .card{padding:12px 12px 10px}
+
+  header.top{gap:10px;margin-bottom:14px}
+  header.top h1{font-size:19px}
+  header.top .sub{font-size:12.5px}
+
+  /* seven tabs do not fit in 375px - scroll them instead of wrapping to 3 rows */
+  nav.tabs{
+    flex-wrap:nowrap;overflow-x:auto;scroll-snap-type:x proximity;
+    scrollbar-width:none;-ms-overflow-style:none;-webkit-overflow-scrolling:touch;
+  }
+  nav.tabs::-webkit-scrollbar{display:none}
+  nav.tabs button{flex:none;scroll-snap-align:start;padding:10px 12px}
+
+  /* filter row: let the scope text drop to its own line, and size for thumbs */
+  .filters{gap:8px;padding:9px 10px}
+  .filters .spacer{flex-basis:100%;height:0}
+  .seg button{min-height:36px;padding:5px 13px}
+  select.ctl,input.ctl{min-height:36px}
+
+  .tile .value{font-size:23px}
+  .hero .value{font-size:40px}
+  .hero .value .u{font-size:15px}
+
+  #tip{max-width:calc(100vw - 16px)}
+  .tblwrap.scroll{max-height:280px}
+}
+
+.card{
+  background:var(--surface-1);border:1px solid var(--border);border-radius:12px;
+  padding:14px 16px 12px;box-shadow:var(--shadow);min-width:0;
+}
+.card > .head{display:flex;align-items:baseline;gap:10px;margin-bottom:2px}
+.card h3{font-size:13.5px}
+.card .note{font-size:12px;color:var(--text-muted);margin:0 0 10px}
+.card .tblbtn{
+  margin-left:auto;appearance:none;border:1px solid var(--border);background:none;
+  color:var(--text-muted);font:inherit;font-size:11.5px;padding:2px 8px;border-radius:6px;cursor:pointer;
+}
+.card .tblbtn:hover{color:var(--text-primary);background:var(--surface-2)}
+
+/* ---------- stat tiles ---------- */
+.tile .label{font-size:12.5px;color:var(--text-secondary)}
+.tile .value{font-size:26px;font-weight:600;line-height:1.15;margin-top:2px}
+.tile .value .u{font-size:14px;font-weight:500;color:var(--text-secondary);margin-left:2px}
+.tile .delta{font-size:12px;color:var(--text-muted);margin-top:2px;display:flex;align-items:center;gap:5px}
+.tile .delta .up{color:var(--good-text)}
+.tile .delta .down{color:var(--critical)}
+.tile .spark{margin-top:8px;height:30px}
+.hero .value{font-size:52px;letter-spacing:-.025em}
+.hero .value .u{font-size:17px}
+
+/* ---------- legend ---------- */
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0 2px;font-size:12px;color:var(--text-secondary)}
+.legend span.k{display:inline-flex;align-items:center;gap:6px}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;flex:none}
+.legend i.line{width:14px;height:2px;border-radius:2px}
+.legend i.dot{width:9px;height:9px;border-radius:50%}
+
+/* ---------- tables ---------- */
+.tblwrap{overflow-x:auto;margin-top:6px}
+table.data{border-collapse:collapse;width:100%;font-size:12.5px;font-variant-numeric:tabular-nums}
+table.data th,table.data td{
+  text-align:right;padding:5px 9px;border-bottom:1px solid var(--grid);white-space:nowrap;
+}
+table.data th{color:var(--text-muted);font-weight:500;text-align:right;
+  position:sticky;top:0;background:var(--surface-1)}
+table.data th:first-child,table.data td:first-child{text-align:left}
+table.data tbody tr:hover{background:var(--surface-2)}
+table.data td.dim{color:var(--text-muted)}
+.tblwrap.scroll{max-height:340px;overflow-y:auto}
+
+/* ---------- chart svg ---------- */
+svg.chart{display:block;width:100%;overflow:visible}
+svg.chart text{fill:var(--text-muted);font-size:11px;font-variant-numeric:tabular-nums}
+svg.chart .ylab,svg.chart .xlab{fill:var(--text-muted)}
+svg.chart .grid{stroke:var(--grid);stroke-width:1}
+svg.chart .axis{stroke:var(--axis);stroke-width:1}
+svg.chart .goal{stroke:var(--text-muted);stroke-width:1;opacity:.55}
+svg.chart .goaltx{fill:var(--text-muted);font-size:10.5px}
+svg.chart .dlabel{fill:var(--text-secondary);font-size:11px;font-weight:600}
+svg.chart .hit{fill:transparent;cursor:pointer}
+svg.chart .hit:focus{outline:none}
+svg.chart .mark{cursor:pointer}
+svg.chart .mark:focus{outline:2px solid var(--text-secondary);outline-offset:1px}
+svg.chart .hover-lift{opacity:.78}
+svg.chart .crosshair{stroke:var(--axis);stroke-width:1}
+
+/* ---------- tooltip ---------- */
+#tip{
+  position:fixed;z-index:99;pointer-events:none;opacity:0;transition:opacity .08s;
+  background:var(--surface-1);border:1px solid var(--border);border-radius:9px;
+  box-shadow:0 6px 22px rgba(0,0,0,.16);padding:8px 10px;font-size:12px;
+  max-width:250px;color:var(--text-secondary);
+}
+#tip .t{font-size:11.5px;color:var(--text-muted);margin-bottom:4px}
+#tip .r{display:flex;align-items:center;gap:7px;line-height:1.55;white-space:nowrap}
+#tip .r i{display:inline-block;width:12px;height:2px;border-radius:2px;flex:none}
+#tip .r b{color:var(--text-primary);font-weight:600;font-variant-numeric:tabular-nums}
+#tip .r s{text-decoration:none;color:var(--text-secondary)}
+
+/* ---------- misc ---------- */
+.empty{
+  color:var(--text-muted);font-size:12.5px;padding:22px 14px;text-align:center;
+  border:1px dashed var(--grid);border-radius:9px;margin-top:4px;
+}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;font-size:13px;margin-top:4px}
+.kv dt{color:var(--text-secondary)}
+.kv dd{margin:0;text-align:right;font-variant-numeric:tabular-nums;font-weight:500}
+.meter{height:9px;border-radius:5px;background:var(--surface-2);overflow:hidden;margin-top:9px}
+.meter i{display:block;height:100%;border-radius:5px}
+.pill{
+  display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;
+  padding:2px 9px;border-radius:999px;border:1px solid var(--border);color:var(--text-secondary);
+}
+.cal{display:flex;gap:3px;flex-wrap:wrap;align-items:flex-start;margin-top:8px}
+.cal .colw{display:flex;flex-direction:column;gap:3px}
+.cal .cell{width:14px;height:14px;border-radius:3px;background:var(--heat-0);cursor:pointer}
+.cal .dowcol{display:flex;flex-direction:column;gap:3px;margin-right:4px}
+.cal .dowcol span{height:14px;font-size:9.5px;color:var(--text-muted);line-height:14px}
+.scale{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-muted);margin-top:10px}
+.scale i{width:14px;height:10px;border-radius:2px;display:inline-block}
+.footnote{color:var(--text-muted);font-size:12px;margin-top:18px;line-height:1.6}
+code{background:var(--surface-2);padding:1px 5px;border-radius:4px;font-size:12px}
+
+/* ---------- installed-app shell (unused by dashboard.html) --------------- */
+.hd-banner{
+  background:var(--surface-1);border:1px solid var(--border);border-left:3px solid var(--s1);
+  border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:13px;
+  color:var(--text-secondary);transition:opacity .4s;
+}
+.hd-banner.bad{border-left-color:var(--s8)}
+.hd-welcome{text-align:left;padding:20px 18px;line-height:1.65;max-width:52ch;margin:0 auto}
+.hd-welcome p{margin:0 0 10px}
+.hd-welcome b{color:var(--text-primary)}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="who">
+      <h1 id="hdr-name">Health dashboard</h1>
+      <div class="sub" id="hdr-sub"></div>
+    </div>
+    <button class="iconbtn" id="themebtn" type="button">Theme</button>
+  </header>
+
+  <nav class="tabs" id="tabs" role="tablist"></nav>
+
+  <div class="filters" id="filters">
+    <span class="lbl">Range</span>
+    <div class="seg" id="rangeseg" role="group" aria-label="Date range"></div>
+    <span class="lbl">Export</span>
+    <select class="ctl" id="weeksel" aria-label="Export folder"></select>
+    <span class="spacer"></span>
+    <span class="scope" id="scopetxt"></span>
+  </div>
+
+  <main id="panels"></main>
+
+  <p class="footnote" id="foot"></p>
+</div>
+
+<div id="tip" role="status" aria-live="polite"></div>
+
+<script>
+"use strict";
+var DATA = /*__DATA__*/null;
+
+/* ======================================================================
+   formatting helpers
+   ====================================================================== */
+var MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+var DOW = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+
+function pad2(n){ return (n<10?"0":"")+n; }
+function fmtInt(n){
+  if(n===null||n===undefined||isNaN(n)) return "–";
+  return Math.round(n).toLocaleString("en-US");
+}
+function fmtCompact(n){
+  if(n===null||n===undefined||isNaN(n)) return "–";
+  var a=Math.abs(n);
+  if(a>=1e6) return (n/1e6).toFixed(1).replace(/\.0$/,"")+"M";
+  if(a>=1e4) return (n/1e3).toFixed(1).replace(/\.0$/,"")+"K";
+  return Math.round(n).toLocaleString("en-US");
+}
+function fmtKm(m){ return m===null||m===undefined?"–":(m/1000).toFixed(2); }
+function fmtDur(min){
+  if(min===null||min===undefined||isNaN(min)) return "–";
+  var m=Math.round(min), h=Math.floor(m/60);
+  return h>0 ? h+"h "+pad2(m%60)+"m" : m+"m";
+}
+function fmtClock(min){
+  if(min===null||min===undefined||isNaN(min)) return "–";
+  var m=((Math.round(min)%1440)+1440)%1440;
+  return pad2(Math.floor(m/60))+":"+pad2(m%60);
+}
+function fmtDate(iso){
+  if(!iso) return "–";
+  var p=iso.split("-");
+  return parseInt(p[2],10)+" "+MON[parseInt(p[1],10)-1];
+}
+function fmtDateFull(iso){
+  if(!iso) return "–";
+  var p=iso.split("-");
+  return parseInt(p[2],10)+" "+MON[parseInt(p[1],10)-1]+" "+p[0];
+}
+function fmtDow(iso){
+  var d=new Date(iso+"T00:00:00");
+  return DOW[(d.getDay()+6)%7];
+}
+function dayIndex(iso){ return Math.round(new Date(iso+"T00:00:00").getTime()/864e5); }
+function fromIndex(i){
+  var d=new Date(i*864e5);
+  return d.getUTCFullYear()+"-"+pad2(d.getUTCMonth()+1)+"-"+pad2(d.getUTCDate());
+}
+function mean(xs){
+  var s=0,n=0;
+  for(var i=0;i<xs.length;i++){ if(xs[i]!==null&&xs[i]!==undefined&&!isNaN(xs[i])){s+=xs[i];n++;} }
+  return n?s/n:null;
+}
+function sum(xs){ var s=0; for(var i=0;i<xs.length;i++) s+=(xs[i]||0); return s; }
+function median(xs){
+  var v=xs.filter(function(x){return x!==null&&x!==undefined&&!isNaN(x);}).sort(function(a,b){return a-b;});
+  if(!v.length) return null;
+  var h=Math.floor(v.length/2);
+  return v.length%2 ? v[h] : (v[h-1]+v[h])/2;
+}
+function quantile(sorted,p){
+  if(!sorted.length) return null;
+  var k=(sorted.length-1)*p, lo=Math.floor(k), hi=Math.min(lo+1,sorted.length-1);
+  return sorted[lo]+(sorted[hi]-sorted[lo])*(k-lo);
+}
+function cssVar(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+
+/* ======================================================================
+   dom helpers
+   ====================================================================== */
+var NS="http://www.w3.org/2000/svg";
+function el(tag,attrs,text){
+  var e=document.createElement(tag);
+  if(attrs) for(var k in attrs){
+    if(k==="class") e.className=attrs[k];
+    else if(k==="html") e.innerHTML=attrs[k];
+    else e.setAttribute(k,attrs[k]);
+  }
+  if(text!==undefined&&text!==null) e.appendChild(document.createTextNode(String(text)));
+  return e;
+}
+function S(tag,attrs,text){
+  var e=document.createElementNS(NS,tag);
+  if(attrs) for(var k in attrs) if(attrs[k]!==null&&attrs[k]!==undefined) e.setAttribute(k,attrs[k]);
+  if(text!==undefined&&text!==null) e.appendChild(document.createTextNode(String(text)));
+  return e;
+}
+function clear(n){ while(n.firstChild) n.removeChild(n.firstChild); }
+
+/* ======================================================================
+   tooltip
+   ====================================================================== */
+var TIP=document.getElementById("tip");
+function tipShow(ev,title,rows){
+  clear(TIP);
+  if(title) TIP.appendChild(el("div",{class:"t"},title));
+  rows.forEach(function(r){
+    var d=el("div",{class:"r"});
+    if(r.color){ var i=el("i"); i.style.background=r.color; d.appendChild(i); }
+    d.appendChild(el("b",null,r.value));
+    if(r.name) d.appendChild(el("s",null,r.name));
+    TIP.appendChild(d);
+  });
+  TIP.style.opacity="1";
+  tipMove(ev);
+}
+function tipMove(ev){
+  var x,y;
+  if(ev&&ev.clientX!==undefined&&ev.clientX!==null){ x=ev.clientX; y=ev.clientY; }
+  else if(ev&&ev.target&&ev.target.getBoundingClientRect){
+    var r=ev.target.getBoundingClientRect(); x=r.left+r.width/2; y=r.top;
+  } else return;
+  var w=TIP.offsetWidth, h=TIP.offsetHeight;
+  var left=x+14, top=y-h-12;
+  if(left+w>window.innerWidth-8) left=x-w-14;
+  if(left<8) left=8;
+  if(top<8) top=y+18;
+  TIP.style.left=left+"px"; TIP.style.top=top+"px";
+}
+function tipHide(){ TIP.style.opacity="0"; }
+/* On touch the pointer is destroyed at lift-off, so pointerleave fires the moment
+   you take your finger away and the tooltip you just opened vanishes. Keep it up
+   for touch and let the tap-outside handler below close it instead. */
+function tipLeave(e){ if(!e||e.pointerType!=="touch") tipHide(); }
+function inChart(n){
+  while(n&&n!==document){
+    if(n.classList&&(n.classList.contains("chart")||n.classList.contains("cell"))) return true;
+    n=n.parentNode;
+  }
+  return false;
+}
+document.addEventListener("pointerdown",function(e){
+  if(TIP.style.opacity==="1"&&!inChart(e.target)) tipHide();
+});
+function bindTip(node,titleFn,rowsFn){
+  node.addEventListener("pointerenter",function(e){ tipShow(e,titleFn(),rowsFn()); });
+  node.addEventListener("pointermove",tipMove);
+  node.addEventListener("pointerleave",tipLeave);
+  node.addEventListener("focus",function(e){ tipShow(e,titleFn(),rowsFn()); });
+  node.addEventListener("blur",tipHide);
+}
+
+/* ======================================================================
+   card + chart registry
+   ====================================================================== */
+var CHARTS=[];
+function card(parent,span,title,note,opts){
+  opts=opts||{};
+  var c=el("div",{class:"card "+span});
+  var head=el("div",{class:"head"});
+  head.appendChild(el("h3",null,title));
+  c.appendChild(head);
+  if(note) c.appendChild(el("p",{class:"note"},note));
+  var body=el("div"); c.appendChild(body);
+  var tbl=el("div"); tbl.hidden=true; c.appendChild(tbl);
+  if(opts.table){
+    var b=el("button",{class:"tblbtn",type:"button"},"Table");
+    b.addEventListener("click",function(){
+      var show=tbl.hidden;
+      tbl.hidden=!show; body.hidden=show;
+      b.textContent=show?"Chart":"Table";
+    });
+    head.appendChild(b);
+  }
+  parent.appendChild(c);
+  return {card:c,body:body,table:tbl,head:head};
+}
+
+/** Register a chart that redraws itself whenever its width changes. */
+function chart(host,draw,tableHost,tableFn){
+  var svg=S("svg",{class:"chart"});
+  host.appendChild(svg);
+  var rec={host:host,svg:svg,draw:draw,last:0};
+  CHARTS.push(rec);
+  if(tableHost&&tableFn) tableFn(tableHost);
+  return rec;
+}
+function drawChart(rec,force){
+  var w=rec.host.clientWidth;
+  if(!w) return;
+  if(!force&&Math.abs(w-rec.last)<2) return;
+  rec.last=w;
+  clear(rec.svg);
+  rec.draw(rec.svg,w);
+}
+function redrawAll(force){ CHARTS.forEach(function(r){ drawChart(r,force); }); }
+
+/* ======================================================================
+   axis helpers
+   ====================================================================== */
+/** A step per tick that is a round number, so every gridline reads cleanly. */
+function niceStep(v,ticks){
+  ticks=ticks||4;
+  if(!(v>0)) return 1;
+  var raw=v/ticks, mag=Math.pow(10,Math.floor(Math.log(raw)/Math.LN10));
+  var n=raw/mag, step;
+  if(n<=1) step=1; else if(n<=1.5) step=1.5; else if(n<=2) step=2;
+  else if(n<=2.5) step=2.5; else if(n<=3) step=3; else if(n<=4) step=4;
+  else if(n<=5) step=5; else if(n<=7.5) step=7.5; else step=10;
+  return step*mag;
+}
+function niceMax(v,ticks){ return niceStep(v,ticks)*(ticks||4); }
+/** Durations in minutes want hour-shaped gridlines, not round minute counts. */
+var TIME_STEPS=[5,10,15,20,30,45,60,90,120,180,240,360,480,720,1440];
+function niceTimeMax(v,ticks){
+  ticks=ticks||4;
+  for(var i=0;i<TIME_STEPS.length;i++)
+    if(TIME_STEPS[i]*ticks>=v) return TIME_STEPS[i]*ticks;
+  return niceMax(v,ticks);
+}
+function ticksFor(max,count){
+  var out=[],step=max/count;
+  for(var i=0;i<=count;i++) out.push(step*i);
+  return out;
+}
+function yAxis(g,x0,x1,scaleY,ticks,fmt){
+  ticks.forEach(function(t){
+    var y=scaleY(t);
+    g.appendChild(S("line",{class:"grid",x1:x0,x2:x1,y1:y,y2:y}));
+    g.appendChild(S("text",{class:"ylab",x:x0-8,y:y+4,"text-anchor":"end"},fmt?fmt(t):fmtCompact(t)));
+  });
+}
+/** A label gutter never wider than a third of the chart, so the plot keeps room
+    on a phone. Charts with long row labels ask for 110-120px, which is most of a
+    375px screen. */
+function gutter(want,w){ return Math.min(want,Math.max(34,Math.round(w*0.32))); }
+/** every Nth x label so they never collide */
+function labelStride(n,w,per){ return Math.max(1,Math.ceil(n/Math.floor(w/(per||46)))); }
+/** y-axis tick for a value in minutes */
+function hoursTick(v){
+  var h=v/60;
+  return (Math.abs(h-Math.round(h))<0.01? String(Math.round(h)) : h.toFixed(1))+"h";
+}
+
+/* ======================================================================
+   generic charts
+   ====================================================================== */
+
+/**
+ * Column chart, one series. rows: [{k, v, label}]
+ */
+function columnChart(host,rows,opt){
+  opt=opt||{};
+  return chart(host,function(svg,w){
+    var H=opt.height||190, P={t:12,r:12,b:26,l:gutter(opt.left||44,w)};
+    var iw=Math.max(10,w-P.l-P.r), ih=H-P.t-P.b;
+    svg.setAttribute("viewBox","0 0 "+w+" "+H);
+    svg.setAttribute("height",H);
+    var g=S("g"); svg.appendChild(g);
+    var maxV=Math.max(opt.min0||0,niceMax(Math.max.apply(null,rows.map(function(r){return r.v||0;}).concat([0,opt.goal||0])),4));
+    if(!(maxV>0)) maxV=1;
+    var sy=function(v){ return P.t+ih-(v/maxV)*ih; };
+    yAxis(g,P.l,P.l+iw,sy,ticksFor(maxV,4),opt.yfmt);
+    g.appendChild(S("line",{class:"axis",x1:P.l,x2:P.l+iw,y1:P.t+ih,y2:P.t+ih}));
+
+    var band=iw/Math.max(1,rows.length);
+    var bw=Math.min(opt.barMax||24,Math.max(2,band-Math.max(2,band*0.28)));
+    var color=opt.color||"var(--s1)";
+    var stride=labelStride(rows.length,iw,opt.labelEvery||44);
+
+    rows.forEach(function(r,i){
+      var cx=P.l+band*i+band/2, v=(r.v===null||r.v===undefined)?0:r.v;
+      var h=Math.max(v>0?2:0,(v/maxV)*ih), y=P.t+ih-h;
+      if(h>0){
+        var rr=Math.min(4,bw/2,h);
+        var p=S("path",{d:roundTopPath(cx-bw/2,y,bw,h,rr),fill:color});
+        g.appendChild(p);
+        r._m=p;
+      }
+      var hit=S("rect",{class:"hit",x:P.l+band*i,y:P.t,width:band,height:ih,tabindex:"0"});
+      (function(rr2,pm){
+        bindTip(hit,function(){return rr2.label||rr2.k;},function(){
+          if(rr2.v===null||rr2.v===undefined) return [{value:"not tracked",name:""}];
+          return (opt.tipRows?opt.tipRows(rr2):[{color:color,value:(opt.vfmt||fmtInt)(rr2.v),name:opt.name||""}]);
+        });
+        hit.addEventListener("pointerenter",function(){ if(pm) pm.classList.add("hover-lift"); });
+        hit.addEventListener("pointerleave",function(){ if(pm) pm.classList.remove("hover-lift"); });
+      })(r,r._m);
+      g.appendChild(hit);
+      if(i%stride===0)
+        g.appendChild(S("text",{class:"xlab",x:cx,y:H-8,"text-anchor":"middle"},r.k));
+    });
+
+    if(opt.goal){
+      var gy=sy(opt.goal);
+      g.appendChild(S("line",{class:"goal",x1:P.l,x2:P.l+iw,y1:gy,y2:gy}));
+      g.appendChild(S("text",{class:"goaltx",x:P.l+iw,y:gy-5,"text-anchor":"end"},opt.goalLabel||("goal "+fmtCompact(opt.goal))));
+    }
+  });
+}
+function roundTopPath(x,y,w,h,r){
+  r=Math.max(0,Math.min(r,w/2,h));
+  return "M"+x+","+(y+h)+" L"+x+","+(y+r)+" Q"+x+","+y+" "+(x+r)+","+y+
+         " L"+(x+w-r)+","+y+" Q"+(x+w)+","+y+" "+(x+w)+","+(y+r)+
+         " L"+(x+w)+","+(y+h)+" Z";
+}
+
+/**
+ * Stacked column chart. rows:[{k,label,vals:[...]}], series:[{name,color}]
+ */
+function stackedChart(host,rows,series,opt){
+  opt=opt||{};
+  return chart(host,function(svg,w){
+    var H=opt.height||210, P={t:12,r:12,b:26,l:gutter(opt.left||46,w)};
+    var iw=Math.max(10,w-P.l-P.r), ih=H-P.t-P.b;
+    svg.setAttribute("viewBox","0 0 "+w+" "+H);
+    svg.setAttribute("height",H);
+    var g=S("g"); svg.appendChild(g);
+    var totals=rows.map(function(r){ return sum(r.vals); });
+    var peak=Math.max.apply(null,totals.concat([0,opt.goal||0]));
+    var maxV=opt.pct?100:(opt.yfmt===hoursTick?niceTimeMax(peak,4):niceMax(peak,4));
+    var sy=function(v){ return P.t+ih-(v/maxV)*ih; };
+    yAxis(g,P.l,P.l+iw,sy,ticksFor(maxV,4),opt.yfmt);
+    g.appendChild(S("line",{class:"axis",x1:P.l,x2:P.l+iw,y1:P.t+ih,y2:P.t+ih}));
+
+    var band=iw/Math.max(1,rows.length);
+    var bw=Math.min(opt.barMax||24,Math.max(3,band-Math.max(2,band*0.28)));
+    var stride=labelStride(rows.length,iw,opt.labelEvery||44);
+    var GAP=2;
+
+    rows.forEach(function(r,i){
+      var cx=P.l+band*i+band/2;
+      var tot=sum(r.vals)||0;
+      var acc=0, segs=[];
+      for(var s=0;s<series.length;s++){
+        var v=opt.pct? (tot? r.vals[s]/tot*100:0) : (r.vals[s]||0);
+        if(v>0) segs.push({s:s,v:v,y0:acc,y1:acc+v});
+        acc+=v;
+      }
+      segs.forEach(function(sg,j){
+        var yTop=sy(sg.y1), yBot=sy(sg.y0);
+        var isTop=(j===segs.length-1);
+        var h=yBot-yTop-(j>0?GAP:0);
+        if(h<0.7) h=0.7;
+        var yy=yTop;
+        var rr=isTop?Math.min(4,bw/2,h):0;
+        g.appendChild(S("path",{
+          d:rr? roundTopPath(cx-bw/2,yy,bw,h,rr)
+              : "M"+(cx-bw/2)+","+yy+" h"+bw+" v"+h+" h"+(-bw)+" Z",
+          fill:series[sg.s].color
+        }));
+      });
+      var hit=S("rect",{class:"hit",x:P.l+band*i,y:P.t,width:band,height:ih,tabindex:"0"});
+      (function(rr2){
+        bindTip(hit,function(){return rr2.label||rr2.k;},function(){
+          var out=[];
+          if(opt.tipTotal&&!opt.pct) out.push({value:opt.tipTotal(sum(rr2.vals)),name:"total"});
+          for(var s=series.length-1;s>=0;s--){
+            if(!rr2.vals[s]) continue;
+            var v=opt.pct? Math.round(rr2.vals[s]/(sum(rr2.vals)||1)*100)+"%" : (opt.vfmt||fmtInt)(rr2.vals[s]);
+            out.push({color:series[s].color,value:v,name:series[s].name});
+          }
+          if(opt.tipExtra) out=out.concat(opt.tipExtra(rr2));
+          if(!out.length) out.push({value:"no data",name:""});
+          return out;
+        });
+      })(r);
+      g.appendChild(hit);
+      if(i%stride===0)
+        g.appendChild(S("text",{class:"xlab",x:cx,y:H-8,"text-anchor":"middle"},r.k));
+    });
+
+    if(opt.goal){
+      var gy=sy(opt.goal);
+      g.appendChild(S("line",{class:"goal",x1:P.l,x2:P.l+iw,y1:gy,y2:gy}));
+      g.appendChild(S("text",{class:"goaltx",x:P.l+iw,y:gy-5,"text-anchor":"end"},opt.goalLabel||""));
+    }
+  });
+}
+
+/**
+ * Line chart with crosshair. series:[{name,color,pts:[[x,y]|null]}]
+ * xs: array of category keys (index domain) OR opt.numericX for continuous x.
+ */
+function lineChart(host,xs,series,opt){
+  opt=opt||{};
+  return chart(host,function(svg,w){
+    var H=opt.height||200, P={t:14,r:opt.right||14,b:26,l:gutter(opt.left||44,w)};
+    var iw=Math.max(10,w-P.l-P.r), ih=H-P.t-P.b;
+    svg.setAttribute("viewBox","0 0 "+w+" "+H);
+    svg.setAttribute("height",H);
+    var g=S("g"); svg.appendChild(g);
+
+    var all=[];
+    series.forEach(function(s){ s.pts.forEach(function(p){ if(p&&p[1]!==null&&!isNaN(p[1])) all.push(p[1]); }); });
+    if(opt.band) opt.band.forEach(function(b){ if(b){ all.push(b[1]); all.push(b[2]); } });
+    if(!all.length){ g.appendChild(S("text",{x:w/2,y:H/2,"text-anchor":"middle"},"No data in range")); return; }
+    var lo=opt.y0!==undefined?opt.y0:Math.min.apply(null,all);
+    var hi=Math.max.apply(null,all);
+    if(opt.y0===undefined){ var pad=(hi-lo)*0.18||2; lo=Math.max(0,lo-pad); hi=hi+pad; }
+    else hi=niceMax(hi,4);
+    if(hi<=lo) hi=lo+1;
+    var sy=function(v){ return P.t+ih-((v-lo)/(hi-lo))*ih; };
+    var n=xs.length;
+    var sx=function(i){ return n<=1? P.l+iw/2 : P.l+(i/(n-1))*iw; };
+
+    var tk=[],c=4;
+    for(var i=0;i<=c;i++) tk.push(lo+(hi-lo)*i/c);
+    yAxis(g,P.l,P.l+iw,sy,tk,opt.yfmt||function(v){return Math.round(v);});
+    g.appendChild(S("line",{class:"axis",x1:P.l,x2:P.l+iw,y1:P.t+ih,y2:P.t+ih}));
+
+    if(opt.band){
+      var up=[],dn=[];
+      opt.band.forEach(function(b,i){ if(b){ up.push(sx(i)+","+sy(b[2])); dn.unshift(sx(i)+","+sy(b[1])); } });
+      if(up.length>1)
+        g.appendChild(S("path",{d:"M"+up.join(" L")+" L"+dn.join(" L")+" Z",
+          fill:opt.bandColor||"var(--s1)",opacity:.10}));
+    }
+
+    series.forEach(function(s){
+      var segs=[],cur=[];
+      s.pts.forEach(function(p,i){
+        if(p&&p[1]!==null&&!isNaN(p[1])) cur.push(sx(i)+","+sy(p[1]));
+        else { if(cur.length) segs.push(cur); cur=[]; }
+      });
+      if(cur.length) segs.push(cur);
+      segs.forEach(function(sg){
+        if(sg.length===1){
+          var xy=sg[0].split(",");
+          g.appendChild(S("circle",{cx:xy[0],cy:xy[1],r:4,fill:s.color,
+            stroke:"var(--surface-1)","stroke-width":2}));
+        } else {
+          g.appendChild(S("path",{d:"M"+sg.join(" L"),fill:"none",stroke:s.color,
+            "stroke-width":2,"stroke-linejoin":"round","stroke-linecap":"round"}));
+        }
+      });
+      // end marker + direct label
+      for(var i=s.pts.length-1;i>=0;i--){
+        var p=s.pts[i];
+        if(p&&p[1]!==null&&!isNaN(p[1])){
+          g.appendChild(S("circle",{cx:sx(i),cy:sy(p[1]),r:4,fill:s.color,
+            stroke:"var(--surface-1)","stroke-width":2}));
+          if(opt.endLabel!==false&&series.length<=3){
+            var tx=sx(i)+(i===n-1?-6:8);
+            g.appendChild(S("text",{class:"dlabel",x:tx,y:sy(p[1])-9,
+              "text-anchor":i===n-1?"end":"start"},(opt.vfmt||fmtInt)(p[1])));
+          }
+          break;
+        }
+      }
+    });
+
+    // crosshair layer
+    var cl=S("line",{class:"crosshair",y1:P.t,y2:P.t+ih,opacity:0}); g.appendChild(cl);
+    var dots=S("g"); g.appendChild(dots);
+    var over=S("rect",{class:"hit",x:P.l,y:P.t,width:iw,height:ih,tabindex:"0"});
+    g.appendChild(over);
+    function at(ev){
+      var box=svg.getBoundingClientRect();
+      var rel=(ev.clientX-box.left)*(w/box.width);
+      var i=n<=1?0:Math.round(((rel-P.l)/iw)*(n-1));
+      return Math.max(0,Math.min(n-1,i));
+    }
+    function show(ev){
+      var i=at(ev);
+      cl.setAttribute("x1",sx(i)); cl.setAttribute("x2",sx(i)); cl.setAttribute("opacity",1);
+      clear(dots);
+      var rows=[];
+      series.forEach(function(s){
+        var p=s.pts[i];
+        if(p&&p[1]!==null&&!isNaN(p[1])){
+          dots.appendChild(S("circle",{cx:sx(i),cy:sy(p[1]),r:4.5,fill:s.color,
+            stroke:"var(--surface-1)","stroke-width":2}));
+          rows.push({color:s.color,value:(opt.vfmt||fmtInt)(p[1]),name:s.name});
+        }
+      });
+      if(opt.band&&opt.band[i])
+        rows.push({value:(opt.vfmt||fmtInt)(opt.band[i][1])+" – "+(opt.vfmt||fmtInt)(opt.band[i][2]),name:opt.bandName||"range"});
+      if(!rows.length) rows=[{value:"no data",name:""}];
+      tipShow(ev,opt.xlabel?opt.xlabel(i):xs[i],rows);
+    }
+    over.addEventListener("pointerenter",show);
+    over.addEventListener("pointermove",show);
+    over.addEventListener("pointerleave",function(e){
+      if(e&&e.pointerType==="touch") return;
+      cl.setAttribute("opacity",0); clear(dots); tipHide();
+    });
+
+    var stride=labelStride(n,iw,opt.labelEvery||52);
+    for(var k=0;k<n;k++) if(k%stride===0)
+      g.appendChild(S("text",{class:"xlab",x:sx(k),y:H-8,"text-anchor":"middle"},xs[k]));
+  });
+}
+
+/**
+ * Floating range bars (min..max) with a marker for the average.
+ * rows:[{k,label,lo,hi,mid,extra}]
+ */
+function rangeChart(host,rows,opt){
+  opt=opt||{};
+  return chart(host,function(svg,w){
+    var H=opt.height||210, P={t:14,r:12,b:26,l:gutter(44,w)};
+    var iw=Math.max(10,w-P.l-P.r), ih=H-P.t-P.b;
+    svg.setAttribute("viewBox","0 0 "+w+" "+H);
+    svg.setAttribute("height",H);
+    var g=S("g"); svg.appendChild(g);
+    var vals=[];
+    rows.forEach(function(r){ if(r.lo!==null&&r.lo!==undefined){ vals.push(r.lo); vals.push(r.hi); } });
+    if(!vals.length){ g.appendChild(S("text",{x:w/2,y:H/2,"text-anchor":"middle"},"No data in range")); return; }
+    var c=4;
+    var vmin=Math.min.apply(null,vals), vmax=Math.max.apply(null,vals);
+    var step=niceStep(vmax-vmin||10,c);
+    var lo=Math.max(0,Math.floor(vmin/step)*step-step);
+    var hi=lo+Math.ceil((vmax-lo)/step)*step;
+    while((hi-lo)/step<c) hi+=step;
+    step=(hi-lo)/c;
+    var sy=function(v){ return P.t+ih-((v-lo)/(hi-lo))*ih; };
+    var tk=[],i; for(i=0;i<=c;i++) tk.push(Math.round(lo+step*i));
+    yAxis(g,P.l,P.l+iw,sy,tk,function(v){return Math.round(v);});
+    g.appendChild(S("line",{class:"axis",x1:P.l,x2:P.l+iw,y1:P.t+ih,y2:P.t+ih}));
+
+    var band=iw/Math.max(1,rows.length);
+    var bw=Math.min(20,Math.max(3,band-Math.max(2,band*0.4)));
+    var stride=labelStride(rows.length,iw,opt.labelEvery||44);
+    rows.forEach(function(r,i){
+      var cx=P.l+band*i+band/2;
+      if(r.lo!==null&&r.lo!==undefined){
+        var y=sy(r.hi), h=Math.max(3,sy(r.lo)-sy(r.hi));
+        g.appendChild(S("rect",{x:cx-bw/2,y:y,width:bw,height:h,rx:Math.min(4,bw/2),
+          fill:opt.color||"var(--s1)",opacity:.28}));
+        if(r.mid!==null&&r.mid!==undefined)
+          g.appendChild(S("circle",{cx:cx,cy:sy(r.mid),r:4,fill:opt.color||"var(--s1)",
+            stroke:"var(--surface-1)","stroke-width":2}));
+        if(r.rest!==null&&r.rest!==undefined)
+          g.appendChild(S("circle",{cx:cx,cy:sy(r.rest),r:3.5,fill:opt.restColor||"var(--s2)",
+            stroke:"var(--surface-1)","stroke-width":2}));
+      }
+      var hit=S("rect",{class:"hit",x:P.l+band*i,y:P.t,width:band,height:ih,tabindex:"0"});
+      (function(rr){
+        bindTip(hit,function(){return rr.label||rr.k;},function(){
+          if(rr.lo===null||rr.lo===undefined) return [{value:"no data",name:""}];
+          var out=[{color:opt.color||"var(--s1)",value:Math.round(rr.lo)+" – "+Math.round(rr.hi)+" bpm",name:"range"}];
+          if(rr.mid!==null&&rr.mid!==undefined) out.push({color:opt.color||"var(--s1)",value:Math.round(rr.mid)+" bpm",name:"average"});
+          if(rr.rest!==null&&rr.rest!==undefined) out.push({color:opt.restColor||"var(--s2)",value:Math.round(rr.rest)+" bpm",name:"resting"});
+          return out;
+        });
+      })(r);
+      g.appendChild(hit);
+      if(i%stride===0) g.appendChild(S("text",{class:"xlab",x:cx,y:H-8,"text-anchor":"middle"},r.k));
+    });
+  });
+}
+
+/**
+ * Day rows x 24h segments (bouts, sleep schedule, workouts).
+ * rows:[{label, segs:[{s,e,color,tip:{title,rows}}]}]
+ */
+function timelineChart(host,rows,opt){
+  opt=opt||{};
+  return chart(host,function(svg,w){
+    var lw=gutter(opt.left||64,w), rowH=opt.rowH||16, gap=opt.rowGap||6;
+    var H=rows.length*(rowH+gap)+30;
+    var iw=Math.max(10,w-lw-12);
+    svg.setAttribute("viewBox","0 0 "+w+" "+H);
+    svg.setAttribute("height",H);
+    var g=S("g"); svg.appendChild(g);
+    var d0=opt.domain?opt.domain[0]:0, d1=opt.domain?opt.domain[1]:1440;
+    var sx=function(m){ return lw+((m-d0)/(d1-d0))*iw; };
+
+    for(var h=d0;h<=d1;h+=opt.tickEvery||180){
+      var x=sx(h);
+      g.appendChild(S("line",{class:"grid",x1:x,x2:x,y1:0,y2:rows.length*(rowH+gap)-gap}));
+      g.appendChild(S("text",{class:"xlab",x:x,y:H-8,"text-anchor":"middle"},fmtClock(h)));
+    }
+    rows.forEach(function(r,i){
+      var y=i*(rowH+gap);
+      g.appendChild(S("text",{class:"ylab",x:lw-8,y:y+rowH/2+4,"text-anchor":"end"},r.label));
+      g.appendChild(S("rect",{x:lw,y:y,width:iw,height:rowH,rx:4,fill:"var(--surface-2)"}));
+      (r.segs||[]).forEach(function(sg){
+        var x0=sx(Math.max(d0,sg.s)), x1=sx(Math.min(d1,sg.e));
+        var ww=Math.max(2,x1-x0);
+        var rect=S("rect",{x:x0,y:y,width:ww,height:rowH,rx:Math.min(3,ww/2),
+          fill:sg.color||"var(--s1)",class:"mark",tabindex:"0"});
+        bindTip(rect,function(){return sg.tip.title;},function(){return sg.tip.rows;});
+        rect.addEventListener("pointerenter",function(){ rect.classList.add("hover-lift"); });
+        rect.addEventListener("pointerleave",function(){ rect.classList.remove("hover-lift"); });
+        g.appendChild(rect);
+      });
+    });
+  });
+}
+
+/**
+ * Hypnogram: stepped stage band over one night.
+ * pts:[[minuteOffset, stageIdx]], stages ordered deep..wake
+ */
+function hypnoChart(host,pts,startMin,stages){
+  return chart(host,function(svg,w){
+    var H=170,P={t:12,r:12,b:26,l:gutter(56,w)};
+    var iw=Math.max(10,w-P.l-P.r), ih=H-P.t-P.b;
+    svg.setAttribute("viewBox","0 0 "+w+" "+H);
+    svg.setAttribute("height",H);
+    var g=S("g"); svg.appendChild(g);
+    if(!pts||!pts.length){ g.appendChild(S("text",{x:w/2,y:H/2,"text-anchor":"middle"},"No detailed sleep data")); return; }
+    var span=pts[pts.length-1][0]+1;
+    var sx=function(m){ return P.l+(m/span)*iw; };
+    var lanes=stages.length, laneH=ih/lanes;
+    // order on screen: awake at top, deep at bottom
+    var order=[3,2,1,0];
+    order.forEach(function(si,row){
+      var y=P.t+row*laneH;
+      g.appendChild(S("line",{class:"grid",x1:P.l,x2:P.l+iw,y1:y+laneH/2,y2:y+laneH/2}));
+      g.appendChild(S("text",{class:"ylab",x:P.l-8,y:y+laneH/2+4,"text-anchor":"end"},stages[si].name));
+    });
+    var rowOf={}; order.forEach(function(si,row){ rowOf[si]=row; });
+
+    // merge consecutive identical stages into blocks
+    var blocks=[],cur=null;
+    pts.forEach(function(p){
+      if(cur&&cur.si===p[1]&&p[0]===cur.e+1){ cur.e=p[0]; }
+      else { if(cur) blocks.push(cur); cur={si:p[1],s:p[0],e:p[0]}; }
+    });
+    if(cur) blocks.push(cur);
+
+    blocks.forEach(function(b){
+      var row=rowOf[b.si], y=P.t+row*laneH+laneH*0.18;
+      var x0=sx(b.s), x1=sx(b.e+1), ww=Math.max(1.5,x1-x0-1);
+      var rect=S("rect",{x:x0,y:y,width:ww,height:laneH*0.64,rx:3,
+        fill:stages[b.si].color,class:"mark",tabindex:"0"});
+      bindTip(rect,function(){ return fmtClock(startMin+b.s)+" – "+fmtClock(startMin+b.e+1); },
+        function(){ return [{color:stages[b.si].color,value:fmtDur(b.e-b.s+1),name:stages[b.si].name}]; });
+      g.appendChild(rect);
+    });
+    var step=span>420?120:60;
+    for(var m=0;m<=span;m+=step){
+      g.appendChild(S("text",{class:"xlab",x:sx(m),y:H-8,"text-anchor":"middle"},fmtClock(startMin+m)));
+    }
+  });
+}
+
+/**
+ * Scatter, single series. pts:[{x,y,label}]
+ */
+function scatterChart(host,pts,opt){
+  opt=opt||{};
+  return chart(host,function(svg,w){
+    var H=opt.height||210,P={t:14,r:16,b:38,l:gutter(48,w)};
+    var iw=Math.max(10,w-P.l-P.r), ih=H-P.t-P.b;
+    svg.setAttribute("viewBox","0 0 "+w+" "+H);
+    svg.setAttribute("height",H);
+    var g=S("g"); svg.appendChild(g);
+    if(pts.length<2){ g.appendChild(S("text",{x:w/2,y:H/2,"text-anchor":"middle"},"Needs at least two days of data")); return; }
+    var xs=pts.map(function(p){return p.x;}), ys=pts.map(function(p){return p.y;});
+    var x0=Math.min.apply(null,xs), x1=Math.max.apply(null,xs);
+    var y1=niceMax(Math.max.apply(null,ys),4);
+    var xp=(x1-x0)*0.12||30; x0-=xp; x1+=xp;
+    var sx=function(v){ return P.l+((v-x0)/(x1-x0))*iw; };
+    var sy=function(v){ return P.t+ih-(v/y1)*ih; };
+    yAxis(g,P.l,P.l+iw,sy,ticksFor(y1,4),opt.yfmt);
+    g.appendChild(S("line",{class:"axis",x1:P.l,x2:P.l+iw,y1:P.t+ih,y2:P.t+ih}));
+    for(var i=0;i<=4;i++){
+      var v=x0+(x1-x0)*i/4;
+      g.appendChild(S("text",{class:"xlab",x:sx(v),y:H-20,"text-anchor":"middle"},(opt.xfmt||fmtInt)(v)));
+    }
+    g.appendChild(S("text",{class:"xlab",x:P.l+iw/2,y:H-4,"text-anchor":"middle"},opt.xtitle||""));
+    pts.forEach(function(p){
+      var c=S("circle",{cx:sx(p.x),cy:sy(p.y),r:5,fill:opt.color||"var(--s1)",
+        stroke:"var(--surface-1)","stroke-width":2});
+      g.appendChild(c);
+      var hit=S("circle",{cx:sx(p.x),cy:sy(p.y),r:13,class:"hit",tabindex:"0"});
+      bindTip(hit,function(){return p.label;},function(){
+        return [{color:opt.color||"var(--s1)",value:(opt.xfmt||fmtInt)(p.x),name:opt.xname||"x"},
+                {color:opt.color||"var(--s1)",value:(opt.yfmt2||fmtInt)(p.y),name:opt.yname||"y"}];
+      });
+      g.appendChild(hit);
+    });
+  });
+}
+
+/**
+ * Horizontal bar chart. rows:[{k,v}]
+ */
+function hbarChart(host,rows,opt){
+  opt=opt||{};
+  return chart(host,function(svg,w){
+    var lw=gutter(opt.left||110,w), rowH=22, gap=8;
+    var H=rows.length*(rowH+gap)+8;
+    var iw=Math.max(10,w-lw-58);
+    svg.setAttribute("viewBox","0 0 "+w+" "+H);
+    svg.setAttribute("height",H);
+    var g=S("g"); svg.appendChild(g);
+    var maxV=niceMax(Math.max.apply(null,rows.map(function(r){return r.v||0;}).concat([1])),4)||1;
+    rows.forEach(function(r,i){
+      var y=i*(rowH+gap);
+      g.appendChild(S("text",{class:"ylab",x:lw-8,y:y+rowH/2+4,"text-anchor":"end"},r.k));
+      var ww=Math.max(2,((r.v||0)/maxV)*iw);
+      var bh=Math.min(18,rowH);
+      g.appendChild(S("path",{d:roundRightPath(lw,y+(rowH-bh)/2,ww,bh,Math.min(4,ww)),
+        fill:r.color||opt.color||"var(--s1)"}));
+      g.appendChild(S("text",{class:"dlabel",x:lw+ww+7,y:y+rowH/2+4},(opt.vfmt||fmtInt)(r.v)));
+      var hit=S("rect",{class:"hit",x:lw,y:y,width:iw,height:rowH,tabindex:"0"});
+      bindTip(hit,function(){return r.k;},function(){
+        return r.tip||[{color:opt.color||"var(--s1)",value:(opt.vfmt||fmtInt)(r.v),name:opt.name||""}];
+      });
+      g.appendChild(hit);
+    });
+  });
+}
+function roundRightPath(x,y,w,h,r){
+  r=Math.max(0,Math.min(r,w,h/2));
+  return "M"+x+","+y+" L"+(x+w-r)+","+y+" Q"+(x+w)+","+y+" "+(x+w)+","+(y+r)+
+         " L"+(x+w)+","+(y+h-r)+" Q"+(x+w)+","+(y+h)+" "+(x+w-r)+","+(y+h)+" L"+x+","+(y+h)+" Z";
+}
+
+/** Sparkline for stat tiles. */
+function sparkline(host,vals,color){
+  return chart(host,function(svg,w){
+    var H=30,P=3;
+    svg.setAttribute("viewBox","0 0 "+w+" "+H);
+    svg.setAttribute("height",H);
+    var g=S("g"); svg.appendChild(g);
+    var v=vals.filter(function(x){return x!==null&&x!==undefined&&!isNaN(x);});
+    if(v.length<2) return;
+    var lo=Math.min.apply(null,v), hi=Math.max.apply(null,v);
+    if(hi===lo){ hi=lo+1; }
+    var n=vals.length;
+    var sx=function(i){ return P+(i/(n-1))*(w-2*P); };
+    var sy=function(y){ return H-P-((y-lo)/(hi-lo))*(H-2*P); };
+    var segs=[],cur=[];
+    vals.forEach(function(y,i){
+      if(y===null||y===undefined||isNaN(y)){ if(cur.length)segs.push(cur); cur=[]; }
+      else cur.push(sx(i)+","+sy(y));
+    });
+    if(cur.length) segs.push(cur);
+    segs.forEach(function(s){
+      if(s.length<2) return;
+      g.appendChild(S("path",{d:"M"+s.join(" L"),fill:"none",stroke:color,
+        "stroke-width":1.75,opacity:.45,"stroke-linecap":"round","stroke-linejoin":"round"}));
+    });
+    for(var i=n-1;i>=0;i--){
+      if(vals[i]!==null&&vals[i]!==undefined&&!isNaN(vals[i])){
+        g.appendChild(S("circle",{cx:sx(i),cy:sy(vals[i]),r:3,fill:color,
+          stroke:"var(--surface-1)","stroke-width":1.5}));
+        break;
+      }
+    }
+  });
+}
+
+/* ======================================================================
+   heatmap (day x hour) - sequential blue
+   ====================================================================== */
+var HEAT=["--heat-1","--heat-2","--heat-3","--heat-4","--heat-5","--heat-6"];
+/** `soft` compresses the top of a skewed count distribution so small but
+    real values stay distinguishable from nothing at all. */
+function heatColor(frac,soft){
+  if(frac<=0) return "var(--heat-0)";
+  if(soft) frac=Math.sqrt(frac);
+  var i=Math.min(HEAT.length-1,Math.floor(frac*HEAT.length));
+  return "var("+HEAT[i]+")";
+}
+function heatmapChart(host,rows,cols,cells,opt){
+  opt=opt||{};
+  return chart(host,function(svg,w){
+    var lw=gutter(opt.left||60,w), cellH=opt.cellH||16, gap=2;
+    var H=rows.length*(cellH+gap)+26;
+    var iw=Math.max(10,w-lw-10);
+    var cw=iw/cols.length;
+    svg.setAttribute("viewBox","0 0 "+w+" "+H);
+    svg.setAttribute("height",H);
+    var g=S("g"); svg.appendChild(g);
+    var maxV=opt.max||Math.max.apply(null,cells.map(function(r){return Math.max.apply(null,r.concat([0]));}).concat([1]));
+    rows.forEach(function(r,i){
+      var y=i*(cellH+gap);
+      g.appendChild(S("text",{class:"ylab",x:lw-8,y:y+cellH/2+4,"text-anchor":"end"},r));
+      cols.forEach(function(c,j){
+        var v=cells[i][j]||0;
+        var rect=S("rect",{x:lw+j*cw,y:y,width:Math.max(1,cw-gap),height:cellH,rx:3,
+          fill:heatColor(maxV?v/maxV:0,opt.soft),class:"mark",tabindex:"0"});
+        bindTip(rect,function(){ return r+" · "+c; },
+          function(){ return [{color:heatColor(maxV?v/maxV:0,opt.soft),value:(opt.vfmt||fmtInt)(v),name:opt.name||""}]; });
+        g.appendChild(rect);
+      });
+    });
+    var stride=Math.max(1,Math.ceil(cols.length/Math.floor(iw/34)));
+    cols.forEach(function(c,j){
+      if(j%stride===0)
+        g.appendChild(S("text",{class:"xlab",x:lw+j*cw+cw/2,y:H-8,"text-anchor":"middle"},c));
+    });
+  });
+}
+function heatScale(host,label,maxV,vfmt){
+  var d=el("div",{class:"scale"});
+  d.appendChild(el("span",null,label+" 0"));
+  var z=el("i"); z.style.background="var(--heat-0)"; d.appendChild(z);
+  d.appendChild(el("span",null,""));
+  HEAT.forEach(function(h){ var i=el("i"); i.style.background="var("+h+")"; d.appendChild(i); });
+  d.appendChild(el("span",null,(vfmt||fmtCompact)(maxV)));
+  host.appendChild(d);
+}
+
+/* ======================================================================
+   tables
+   ====================================================================== */
+function table(host,cols,rows,opt){
+  opt=opt||{};
+  var wrap=el("div",{class:"tblwrap"+(opt.scroll?" scroll":"")});
+  var t=el("table",{class:"data"});
+  var thead=el("thead"), tr=el("tr");
+  cols.forEach(function(c){ tr.appendChild(el("th",null,c)); });
+  thead.appendChild(tr); t.appendChild(thead);
+  var tb=el("tbody");
+  rows.forEach(function(r){
+    var x=el("tr");
+    r.forEach(function(v,i){
+      var td=el("td",(v===null||v===undefined||v==="–")?{class:"dim"}:null,
+                v===null||v===undefined?"–":v);
+      x.appendChild(td);
+    });
+    tb.appendChild(x);
+  });
+  t.appendChild(tb);
+  wrap.appendChild(t);
+  host.appendChild(wrap);
+  if(!rows.length) host.appendChild(el("div",{class:"empty"},"Nothing in the selected range."));
+  return wrap;
+}
+function legend(host,items){
+  var d=el("div",{class:"legend"});
+  items.forEach(function(it){
+    var s=el("span",{class:"k"});
+    var i=el("i",{class:it.line?"line":(it.dot?"dot":"")});
+    i.style.background=it.color;
+    s.appendChild(i);
+    s.appendChild(document.createTextNode(it.name));
+    d.appendChild(s);
+  });
+  host.appendChild(d);
+  return d;
+}
+function tile(parent,span,label,value,unit,opts){
+  opts=opts||{};
+  var c=el("div",{class:"card tile "+span+(opts.hero?" hero":"")});
+  c.appendChild(el("div",{class:"label"},label));
+  var v=el("div",{class:"value"},value);
+  if(unit) v.appendChild(el("span",{class:"u"},unit));
+  c.appendChild(v);
+  if(opts.delta!==undefined&&opts.delta!==null){
+    var d=el("div",{class:"delta"});
+    var dir=opts.delta>0?"up":(opts.delta<0?"down":"");
+    var good=opts.higherIsBetter===false?(opts.delta<0):(opts.delta>0);
+    var arrow=opts.delta>0?"▲":(opts.delta<0?"▼":"■");
+    var sp=el("span",{class:opts.delta===0?"":(good?"up":"down")},
+              arrow+" "+opts.deltaText);
+    d.appendChild(sp);
+    d.appendChild(el("span",null,opts.deltaNote||"vs previous period"));
+    if(opts.sub) d.appendChild(el("span",null,"· "+opts.sub));
+    c.appendChild(d);
+  } else if(opts.sub){
+    c.appendChild(el("div",{class:"delta"},opts.sub));
+  }
+  if(opts.spark&&opts.spark.length>1){
+    var sh=el("div",{class:"spark"});
+    c.appendChild(sh);
+    parent.appendChild(c);
+    sparkline(sh,opts.spark,opts.sparkColor||"var(--s1)");
+    return c;
+  }
+  parent.appendChild(c);
+  return c;
+}
+
+/* ======================================================================
+   state + filtering
+   ====================================================================== */
+var STAGES=[
+  {key:"deep", name:"Deep",  color:"var(--sleep-deep)"},
+  {key:"rem",  name:"REM",   color:"var(--sleep-rem)"},
+  {key:"light",name:"Light", color:"var(--sleep-light)"},
+  {key:"wake", name:"Awake", color:"var(--sleep-wake)"}
+];
+var ZONES=[
+  {name:"Rest",     color:"var(--o1)"},
+  {name:"Light",    color:"var(--o2)"},
+  {name:"Moderate", color:"var(--o3)"},
+  {name:"Vigorous", color:"var(--o4)"},
+  {name:"Peak",     color:"var(--o5)"}
+];
+var STEP_GOAL=10000, SLEEP_GOAL=480;
+
+var state={range:"all",week:"all",tab:"overview",hrDay:null,sleepDay:null};
+/* Set by boot(). In the installed app DATA is still null while this script
+   parses, so it cannot be derived here. */
+var ALL=null;
+
+function inRange(d){
+  if(state.week!=="all" && d.week!==state.week) return false;
+  if(state.range==="all") return true;
+  var n=parseInt(state.range,10);
+  var last=dayIndex(ALL[ALL.length-1].date);
+  return dayIndex(d.date) > last-n;
+}
+function sel(){ return ALL.filter(inRange); }
+/** the equally long window immediately before the selection, for deltas */
+function prev(cur){
+  if(!cur.length) return [];
+  var lo=dayIndex(cur[0].date), n=cur.length;
+  return ALL.filter(function(d){
+    var i=dayIndex(d.date);
+    return i<lo && i>=lo-n;
+  });
+}
+
+function deltaOpts(curVals,prevVals,fmt,higherIsBetter){
+  var a=mean(curVals), b=mean(prevVals);
+  if(a===null||b===null||b===0) return {};
+  var pctv=(a-b)/Math.abs(b)*100;
+  return {
+    delta: a-b,
+    deltaText: (pctv>0?"+":"")+pctv.toFixed(0)+"%",
+    higherIsBetter: higherIsBetter!==false
+  };
+}
+
+/* ======================================================================
+   tabs
+   ====================================================================== */
+var TABS=[
+  {id:"overview", name:"Overview",   render:renderOverview},
+  {id:"activity", name:"Activity",   render:renderActivity},
+  {id:"heart",    name:"Heart rate", render:renderHeart},
+  {id:"sleep",    name:"Sleep",      render:renderSleep},
+  {id:"workouts", name:"Workouts",   render:renderWorkouts},
+  {id:"body",     name:"Body",       render:renderBody},
+  {id:"data",     name:"Data",       render:renderData}
+];
+
+/* ======================================================================
+   TAB: overview
+   ====================================================================== */
+function renderOverview(root){
+  var days=sel(), pr=prev(days);
+  var full=function(d){ return d.steps>0&&!d.partial; };
+  var withSteps=days.filter(full);
+  var withSleep=days.filter(function(d){return d.sleep;});
+  var withHr=days.filter(function(d){return d.hr;});
+  var prSteps=pr.filter(full);
+  var skipped=days.filter(function(d){return d.steps>0&&d.partial;}).length;
+
+  var g1=el("div",{class:"grid"}); root.appendChild(g1);
+
+  tile(g1,"c4","Average daily steps",
+    fmtInt(mean(withSteps.map(function(d){return d.steps;}))||0),null,
+    Object.assign({hero:true,spark:days.map(function(d){return d.steps||null;}),
+      sparkColor:"var(--s1)",
+      sub:skipped? ("over "+withSteps.length+" full day"+(withSteps.length===1?"":"s")+
+                    " · "+skipped+" part-worn day"+(skipped===1?"":"s")+" left out")
+                 : ("over "+withSteps.length+" tracked day"+(withSteps.length===1?"":"s"))},
+      deltaOpts(withSteps.map(function(d){return d.steps;}),prSteps.map(function(d){return d.steps;}))));
+
+  tile(g1,"c4","Average sleep per night",
+    fmtDur(mean(withSleep.map(function(d){return d.sleep.total;}))),null,
+    Object.assign({spark:days.map(function(d){return d.sleep?d.sleep.total:null;}),
+      sparkColor:"var(--sleep-rem)"},
+      deltaOpts(withSleep.map(function(d){return d.sleep.total;}),
+                pr.filter(function(d){return d.sleep;}).map(function(d){return d.sleep.total;}))));
+
+  var restVals=withHr.map(function(d){return d.hr.rest;}).filter(function(v){return v;});
+  tile(g1,"c4","Resting heart rate",
+    restVals.length?Math.round(mean(restVals)):"–","bpm",
+    Object.assign({spark:days.map(function(d){return d.hr&&d.hr.rest?d.hr.rest:null;}),
+      sparkColor:"var(--s8)"},
+      deltaOpts(restVals,pr.filter(function(d){return d.hr&&d.hr.rest;}).map(function(d){return d.hr.rest;}),
+                null,false)));
+
+  var g2=el("div",{class:"grid"}); root.appendChild(g2);
+  tile(g2,"c3","Total distance",fmtKm(sum(days.map(function(d){return d.distance;}))),"km",
+    {sub:fmtInt(sum(days.map(function(d){return d.steps;})))+" steps in total"});
+  tile(g2,"c3","Active calories",fmtCompact(sum(days.map(function(d){return d.calories;}))),"kcal",
+    {sub:"burned above resting"});
+  tile(g2,"c3","Active minutes",fmtDur(sum(days.map(function(d){return d.activeMin;}))),null,
+    {sub:"in walking / movement bouts"});
+  var wk=days.reduce(function(a,d){return a+d.sports.length;},0);
+  tile(g2,"c3","Workouts",fmtInt(wk),null,
+    {sub:fmtDur(sum(days.map(function(d){return d.sportMin;})))+" · "+
+         fmtCompact(sum(days.map(function(d){return d.sportCal;})))+" kcal"});
+
+  var g3=el("div",{class:"grid"}); root.appendChild(g3);
+
+  // daily steps
+  var c=card(g3,"c6","Daily steps","Bars are one day; the line marks a "+fmtCompact(STEP_GOAL)+"-step goal.",{table:true});
+  columnChart(c.body,days.map(function(d){
+    return {k:fmtDate(d.date),label:fmtDow(d.date)+" "+fmtDateFull(d.date),v:d.steps,d:d};
+  }),{goal:STEP_GOAL,color:"var(--s1)",height:210,
+      tipRows:function(r){
+        var out=[
+          {color:"var(--s1)",value:fmtInt(r.d.steps),name:"steps"},
+          {color:"var(--s3)",value:fmtKm(r.d.distance)+" km",name:"distance"},
+          {color:"var(--s2)",value:fmtInt(r.d.calories)+" kcal",name:"active burn"}];
+        if(r.d.partial) out.push({value:"watch worn "+fmtDur(r.d.wearMin),name:"part day"});
+        return out;
+      }});
+  table(c.table,["Day","Date","Steps","Distance (km)","Active kcal","Active time","Watch worn"],
+    days.map(function(d){ return [fmtDow(d.date),fmtDateFull(d.date),fmtInt(d.steps),
+      d.distance===null?"–":fmtKm(d.distance),fmtInt(d.calories),fmtDur(d.activeMin),
+      d.hr?fmtDur(d.wearMin):"–"];}),{scroll:true});
+
+  // goal ring / streak summary
+  var hit=withSteps.filter(function(d){return d.steps>=STEP_GOAL;}).length;
+  var c2=card(g3,"c3","Goal days","Days reaching "+fmtCompact(STEP_GOAL)+" steps.");
+  var pctHit=withSteps.length?Math.round(hit/withSteps.length*100):0;
+  var big=el("div",{class:"value"}); big.style.fontSize="40px"; big.style.fontWeight="600";
+  big.appendChild(document.createTextNode(hit+" / "+withSteps.length));
+  c2.body.appendChild(big);
+  var m=el("div",{class:"meter"}); var f=el("i");
+  f.style.width=pctHit+"%";
+  f.style.background=pctHit>=70?"var(--good)":(pctHit>=40?"var(--warning)":"var(--serious)");
+  m.appendChild(f); c2.body.appendChild(m);
+  c2.body.appendChild(el("p",{class:"note"},pctHit+"% of tracked days · best day "+
+    fmtInt(Math.max.apply(null,withSteps.map(function(d){return d.steps;}).concat([0])))+" steps"));
+
+  var bestSleep=withSleep.slice().sort(function(a,b){return b.sleep.total-a.sleep.total;})[0];
+  var c2b=card(g3,"c3","Sleep quality","Share of sleep spent in deep + REM.");
+  var deepPct=mean(withSleep.map(function(d){
+    return d.sleep.total?(d.sleep.deep+d.sleep.rem)/d.sleep.total*100:null;}));
+  var big2=el("div",{class:"value"}); big2.style.fontSize="40px"; big2.style.fontWeight="600";
+  big2.appendChild(document.createTextNode(deepPct===null?"–":Math.round(deepPct)+"%"));
+  c2b.body.appendChild(big2);
+  var m2=el("div",{class:"meter"}); var f2=el("i");
+  f2.style.width=Math.min(100,deepPct||0)+"%";
+  f2.style.background=(deepPct>=40?"var(--good)":(deepPct>=30?"var(--warning)":"var(--serious)"));
+  m2.appendChild(f2); c2b.body.appendChild(m2);
+  c2b.body.appendChild(el("p",{class:"note"},
+    "Typical adult range is 35–45%. Longest night "+
+    (bestSleep?fmtDur(bestSleep.sleep.total)+" on "+fmtDate(bestSleep.date):"–")+"."));
+
+  // sleep stacked
+  var g4=el("div",{class:"grid"}); root.appendChild(g4);
+  var c3=card(g4,"c8","Sleep by stage","Each column is one night, labelled by the morning it ended.",{table:true});
+  legend(c3.body,STAGES.map(function(s){return {name:s.name,color:s.color};}));
+  stackedChart(c3.body,days.map(function(d){
+    return {k:fmtDate(d.date),label:fmtDow(d.date)+" "+fmtDateFull(d.date),
+      vals:d.sleep?[d.sleep.deep,d.sleep.rem,d.sleep.light,d.sleep.wake]:[0,0,0,0]};
+  }),STAGES,{goal:SLEEP_GOAL,goalLabel:"8h target",height:220,
+      vfmt:fmtDur,yfmt:hoursTick,
+      tipTotal:function(v){return fmtDur(v);}});
+  table(c3.table,["Day","Date","Asleep","Deep","REM","Light","Awake","Efficiency","Bedtime","Wake"],
+    withSleep.map(function(d){ return [fmtDow(d.date),fmtDateFull(d.date),fmtDur(d.sleep.total),
+      fmtDur(d.sleep.deep),fmtDur(d.sleep.rem),fmtDur(d.sleep.light),fmtDur(d.sleep.wake),
+      (d.sleep.eff===null||d.sleep.eff===undefined?"–":d.sleep.eff+"%"),
+      fmtClock(d.sleep.bedMin),fmtClock(d.sleep.wakeMin)];}),{scroll:true});
+
+  var c4=card(g4,"c4","Resting heart rate","Calmest tenth of each night's readings.",{table:true});
+  lineChart(c4.body,days.map(function(d){return fmtDate(d.date);}),
+    [{name:"Resting HR",color:"var(--s8)",pts:days.map(function(d){
+      return [0,d.hr&&d.hr.rest?d.hr.rest:null];})}],
+    {height:210,vfmt:function(v){return Math.round(v)+" bpm";},
+     xlabel:function(i){return fmtDow(days[i].date)+" "+fmtDateFull(days[i].date);}});
+  table(c4.table,["Date","Resting","Average","Min","Max"],
+    days.filter(function(d){return d.hr;}).map(function(d){
+      return [fmtDateFull(d.date),d.hr.rest===null?"–":Math.round(d.hr.rest),
+              Math.round(d.hr.avg),d.hr.min,d.hr.max];}),{scroll:true});
+
+  // calendar heatmap across the whole history (not range-filtered, by design)
+  var g5=el("div",{class:"grid"}); root.appendChild(g5);
+  var c5=card(g5,"c12","Step calendar",
+    "Every tracked day since the first export — this one always shows the full history.");
+  calendarHeatmap(c5.body,ALL);
+
+  // weekly rollup
+  var g6=el("div",{class:"grid"}); root.appendChild(g6);
+  var c6=card(g6,"c12","Week by week","One row per calendar week (Monday–Sunday) across everything loaded.");
+  table(c6.body,["Week","Dates","Days","Total steps","Avg steps/day","Distance (km)",
+                 "Active kcal","Avg sleep","Avg deep","Avg resting HR","Workouts"],
+    DATA.isoWeeks.map(function(w){
+      return [w.key,fmtDate(w.start)+" – "+fmtDate(w.end),w.days,fmtInt(w.steps),
+        fmtInt(w.avgSteps),fmtKm(w.distance),fmtInt(w.calories),fmtDur(w.avgSleep),
+        fmtDur(w.avgDeep),w.avgRest===null?"–":Math.round(w.avgRest),w.workouts];
+    }));
+}
+
+function calendarHeatmap(host,days){
+  if(!days.length) return;
+  var wrap=el("div",{class:"cal"});
+  var dowcol=el("div",{class:"dowcol"});
+  DOW.forEach(function(d,i){ dowcol.appendChild(el("span",null,i%2===0?d:"")); });
+  wrap.appendChild(dowcol);
+
+  var first=dayIndex(days[0].date), last=dayIndex(days[days.length-1].date);
+  var byDate={}; days.forEach(function(d){ byDate[d.date]=d; });
+  // back up to the Monday of the first week
+  var startDow=(new Date(days[0].date+"T00:00:00").getDay()+6)%7;
+  var cur=first-startDow;
+  var maxV=Math.max.apply(null,days.map(function(d){return d.steps||0;}).concat([1]));
+  while(cur<=last){
+    var col=el("div",{class:"colw"});
+    for(var i=0;i<7;i++){
+      var iso=fromIndex(cur+i);
+      var cell=el("div",{class:"cell"});
+      var d=byDate[iso];
+      if(cur+i<first||cur+i>last){ cell.style.visibility="hidden"; }
+      else if(d&&!d.hasActivity){
+        cell.style.background="var(--surface-2)";
+        (function(dd,cc){
+          bindTip(cc,function(){return fmtDow(dd.date)+" "+fmtDateFull(dd.date);},
+            function(){ return [{value:"no step data",name:""}]; });
+          cc.setAttribute("tabindex","0");
+        })(d,cell);
+      }
+      else if(d){
+        cell.style.background=heatColor(d.steps/maxV);
+        (function(dd,cc){
+          bindTip(cc,function(){return fmtDow(dd.date)+" "+fmtDateFull(dd.date);},function(){
+            var rows=[{color:cc.style.background,value:fmtInt(dd.steps),name:"steps"}];
+            if(dd.sleep) rows.push({value:fmtDur(dd.sleep.total),name:"sleep"});
+            if(dd.hr&&dd.hr.rest) rows.push({value:Math.round(dd.hr.rest)+" bpm",name:"resting HR"});
+            return rows;
+          });
+          cc.setAttribute("tabindex","0");
+        })(d,cell);
+      }
+      col.appendChild(cell);
+    }
+    wrap.appendChild(col);
+    cur+=7;
+  }
+  host.appendChild(wrap);
+  heatScale(host,"steps",maxV);
+}
+
+/* ======================================================================
+   TAB: activity
+   ====================================================================== */
+function renderActivity(root){
+  var days=sel();
+
+  var g1=el("div",{class:"grid"}); root.appendChild(g1);
+  var mk=function(span,title,note,key,color,vfmt,yfmt){
+    var c=card(g1,span,title,note,{table:true});
+    columnChart(c.body,days.map(function(d){
+      return {k:fmtDate(d.date),label:fmtDow(d.date)+" "+fmtDateFull(d.date),v:d[key]};
+    }),{color:color,height:170,vfmt:vfmt,yfmt:yfmt,name:title.toLowerCase()});
+    table(c.table,["Date",title],days.map(function(d){
+      return [fmtDateFull(d.date),(vfmt||fmtInt)(d[key])];}),{scroll:true});
+  };
+  mk("c4","Steps","Daily step count.","steps","var(--s1)");
+  mk("c4","Distance","Metres covered per day.","distance","var(--s3)",
+     function(v){return fmtKm(v)+" km";},function(v){return (v/1000).toFixed(1)+"k";});
+  mk("c4","Active calories","Energy burned above resting.","calories","var(--s2)",
+     function(v){return fmtInt(v)+" kcal";});
+
+  var g2=el("div",{class:"grid"}); root.appendChild(g2);
+  var c1=card(g2,"c8","When you move","Steps per hour of the day, one row per date.",{table:true});
+  var hours=[]; for(var h=0;h<24;h++) hours.push(pad2(h));
+  var cells=days.map(function(d){
+    var row=new Array(24); for(var i=0;i<24;i++) row[i]=0;
+    d.stepSeries.forEach(function(p){ row[Math.floor(p[0]/60)]+=p[1]; });
+    return row;
+  });
+  var maxCell=Math.max.apply(null,cells.map(function(r){return Math.max.apply(null,r.concat([0]));}).concat([1]));
+  heatmapChart(c1.body,days.map(function(d){return fmtDow(d.date)+" "+fmtDate(d.date);}),hours,cells,
+    {name:"steps",max:maxCell,left:78,soft:true});
+  heatScale(c1.body,"steps / hour",maxCell);
+  table(c1.table,["Date"].concat(hours.map(function(h){return h+"h";})),
+    days.map(function(d,i){ return [fmtDateFull(d.date)].concat(cells[i].map(function(v){return v||"–";})); }),
+    {scroll:true});
+
+  var c2=card(g2,"c4","Typical day","Average steps per hour across the selected days.",{table:true});
+  var prof=new Array(24); for(var i=0;i<24;i++) prof[i]=[];
+  days.forEach(function(d){
+    if(!d.steps) return;
+    var row=new Array(24); for(var k=0;k<24;k++) row[k]=0;
+    d.stepSeries.forEach(function(p){ row[Math.floor(p[0]/60)]+=p[1]; });
+    for(var k2=0;k2<24;k2++) prof[k2].push(row[k2]);
+  });
+  columnChart(c2.body,prof.map(function(v,h){
+    return {k:h%3===0?pad2(h):"",label:pad2(h)+":00 – "+pad2(h)+":59",v:Math.round(mean(v)||0)};
+  }),{color:"var(--s1)",height:200,left:40,labelEvery:1,name:"avg steps"});
+  table(c2.table,["Hour","Avg steps"],prof.map(function(v,h){
+    return [pad2(h)+":00",fmtInt(Math.round(mean(v)||0))];}),{scroll:true});
+
+  var g3=el("div",{class:"grid"}); root.appendChild(g3);
+  var bouts=[];
+  days.forEach(function(d){ d.bouts.forEach(function(b){ bouts.push({d:d,b:b}); }); });
+  var c3=card(g3,"c12","Movement bouts",
+    "Continuous walking / movement the watch logged, placed on a 24-hour clock.",{table:true});
+  if(bouts.length){
+    timelineChart(c3.body,days.map(function(d){
+      return {label:fmtDow(d.date)+" "+fmtDate(d.date),
+        segs:d.bouts.map(function(b){
+          return {s:b[0],e:b[1],color:"var(--s1)",
+            tip:{title:fmtClock(b[0])+" – "+fmtClock(b[1])+" · "+fmtDate(d.date),
+              rows:[{color:"var(--s1)",value:fmtDur(b[1]-b[0]),name:"duration"},
+                    {color:"var(--s1)",value:fmtInt(b[2]),name:"steps"},
+                    {color:"var(--s3)",value:fmtInt(b[3])+" m",name:"distance"},
+                    {color:"var(--s2)",value:fmtInt(b[4])+" kcal",name:"calories"}]}};
+        })};
+    }),{left:78});
+  } else {
+    c3.body.appendChild(el("div",{class:"empty"},"No movement bouts in the selected range."));
+  }
+  table(c3.table,["Date","Start","End","Duration","Steps","Distance (m)","kcal"],
+    bouts.map(function(x){
+      return [fmtDateFull(x.d.date),fmtClock(x.b[0]),fmtClock(x.b[1]),
+        fmtDur(x.b[1]-x.b[0]),fmtInt(x.b[2]),fmtInt(x.b[3]),fmtInt(x.b[4])];}),{scroll:true});
+}
+
+/* ======================================================================
+   TAB: heart rate
+   ====================================================================== */
+function renderHeart(root){
+  var days=sel(), pr=prev(days);
+  var withHr=days.filter(function(d){return d.hr;});
+
+  var g0=el("div",{class:"grid"}); root.appendChild(g0);
+  var restVals=withHr.map(function(d){return d.hr.rest;}).filter(function(v){return v;});
+  tile(g0,"c3","Resting heart rate",restVals.length?Math.round(mean(restVals)):"–","bpm",
+    Object.assign({spark:days.map(function(d){return d.hr&&d.hr.rest?d.hr.rest:null;}),sparkColor:"var(--s8)"},
+      deltaOpts(restVals,pr.filter(function(d){return d.hr&&d.hr.rest;}).map(function(d){return d.hr.rest;}),null,false)));
+  tile(g0,"c3","Average heart rate",
+    withHr.length?Math.round(mean(withHr.map(function(d){return d.hr.avg;}))):"–","bpm",
+    {sub:"across all automatic readings"});
+  tile(g0,"c3","Highest reading",
+    withHr.length?Math.max.apply(null,withHr.map(function(d){return d.hr.max;})):"–","bpm",
+    {sub:"estimated max "+DATA.user.maxHr+" bpm (220 − age)"});
+  tile(g0,"c3","Readings",fmtInt(sum(withHr.map(function(d){return d.hr.n;}))),null,
+    {sub:"automatic samples in range"});
+
+  var g1=el("div",{class:"grid"}); root.appendChild(g1);
+  var c1=card(g1,"c8","Daily heart-rate range",
+    "The bar spans the day's lowest to highest reading; dots mark the day average and the resting rate.",
+    {table:true});
+  legend(c1.body,[{name:"Min–max range (band)",color:"var(--s1)"},
+                  {name:"Day average (dot)",color:"var(--s1)",dot:true},
+                  {name:"Resting (dot)",color:"var(--s2)",dot:true}]);
+  rangeChart(c1.body,days.map(function(d){
+    return {k:fmtDate(d.date),label:fmtDow(d.date)+" "+fmtDateFull(d.date),
+      lo:d.hr?d.hr.min:null,hi:d.hr?d.hr.max:null,mid:d.hr?d.hr.avg:null,
+      rest:d.hr?d.hr.rest:null};
+  }),{color:"var(--s1)",restColor:"var(--s2)",height:230});
+  table(c1.table,["Date","Min","P10","Average","P90","Max","Resting","Samples"],
+    withHr.map(function(d){ return [fmtDateFull(d.date),d.hr.min,d.hr.p10,d.hr.avg,
+      d.hr.p90,d.hr.max,d.hr.rest===null?"–":Math.round(d.hr.rest),d.hr.n];}),{scroll:true});
+
+  var c2=card(g1,"c4","Across the day",
+    "Median heart rate by hour; the band covers the 10th–90th percentile.",{table:true});
+  var byHour=[]; for(var h=0;h<24;h++) byHour.push([]);
+  days.forEach(function(d){ d.hrSeries.forEach(function(p){ byHour[Math.floor(p[0]/60)].push(p[1]); }); });
+  var hrs=[]; for(var h2=0;h2<24;h2++) hrs.push(pad2(h2));
+  var bandArr=byHour.map(function(v){
+    if(!v.length) return null;
+    var s=v.slice().sort(function(a,b){return a-b;});
+    return [0,Math.round(quantile(s,0.1)),Math.round(quantile(s,0.9))];
+  });
+  lineChart(c2.body,hrs,[{name:"Median",color:"var(--s1)",
+    pts:byHour.map(function(v){return [0,v.length?Math.round(median(v)):null];})}],
+    {band:bandArr,bandColor:"var(--s1)",bandName:"10th–90th pct",height:230,
+     endLabel:false,vfmt:function(v){return Math.round(v)+" bpm";},
+     xlabel:function(i){return pad2(i)+":00";},labelEvery:34});
+  table(c2.table,["Hour","Median","P10","P90","Samples"],byHour.map(function(v,h){
+    if(!v.length) return [pad2(h)+":00","–","–","–",0];
+    var s=v.slice().sort(function(a,b){return a-b;});
+    return [pad2(h)+":00",Math.round(median(v)),Math.round(quantile(s,.1)),
+            Math.round(quantile(s,.9)),v.length];}),{scroll:true});
+
+  var g2=el("div",{class:"grid"}); root.appendChild(g2);
+  var cuts=DATA.zoneCuts||[];
+  var ACTIVE=ZONES.slice(1);
+  var c3=card(g2,"c7","Time in active heart-rate zones",
+    "Light "+cuts[0]+"–"+cuts[1]+", moderate "+cuts[1]+"–"+cuts[2]+
+    ", vigorous "+cuts[2]+"–"+cuts[3]+", peak "+cuts[3]+"+ bpm. Resting time "+
+    "(under "+cuts[0]+") is most of every day, so it is left out here and kept in the table.",
+    {table:true});
+  legend(c3.body,ACTIVE.map(function(z){return {name:z.name,color:z.color};}));
+  stackedChart(c3.body,days.map(function(d){
+    return {k:fmtDate(d.date),label:fmtDow(d.date)+" "+fmtDateFull(d.date),
+      rest:d.hr?d.hr.zones[0]:0,
+      vals:d.hr?d.hr.zones.slice(1):[0,0,0,0]};
+  }),ACTIVE,{height:220,vfmt:fmtDur,yfmt:hoursTick,
+      tipTotal:function(v){return fmtDur(v);},
+      tipExtra:function(r){ return [{color:ZONES[0].color,value:fmtDur(r.rest),name:"resting"}]; }});
+  table(c3.table,["Date"].concat(ZONES.map(function(z){return z.name;})),
+    withHr.map(function(d){ return [fmtDateFull(d.date)].concat(d.hr.zones.map(fmtDur));}),
+    {scroll:true});
+
+  var c4=card(g2,"c5","Zone split","Total time in each active zone across the range.",{table:true});
+  var tot=[0,0,0,0,0];
+  withHr.forEach(function(d){ d.hr.zones.forEach(function(v,i){ tot[i]+=v; }); });
+  var totSum=sum(tot)||1;
+  hbarChart(c4.body,ACTIVE.map(function(z,i){
+    return {k:z.name,v:tot[i+1],color:z.color,
+      tip:[{color:z.color,value:fmtDur(tot[i+1]),name:"total"},
+           {color:z.color,value:(tot[i+1]/totSum*100).toFixed(1)+"%",name:"of tracked time"}]};
+  }),{vfmt:fmtDur,left:78});
+  c4.body.appendChild(el("p",{class:"note"},
+    "Below all of this sits "+fmtDur(tot[0])+" at rest — "+
+    Math.round(tot[0]/totSum*100)+"% of the time the watch was on."));
+  table(c4.table,["Zone","Range (bpm)","Time","Share"],ZONES.map(function(z,i){
+    var lo=i===0?0:cuts[i-1], hi=i===ZONES.length-1?"+":cuts[i];
+    return [z.name,(i===0?"< "+cuts[0]:(i===4?cuts[3]+"+":lo+"–"+hi)),fmtDur(tot[i]),
+            Math.round(tot[i]/totSum*100)+"%"];}));
+
+  // single-day detail
+  var g3=el("div",{class:"grid"}); root.appendChild(g3);
+  var hrDays=days.filter(function(d){return d.hrSeries.length>5;});
+  var c5=card(g3,"c12","One day in detail","Every automatic reading for the chosen day.",{table:true});
+  if(hrDays.length){
+    if(!state.hrDay||!hrDays.some(function(d){return d.date===state.hrDay;}))
+      state.hrDay=hrDays[hrDays.length-1].date;
+    var pick=el("select",{class:"ctl","aria-label":"Day"});
+    hrDays.forEach(function(d){
+      var o=el("option",{value:d.date},fmtDow(d.date)+" "+fmtDateFull(d.date));
+      if(d.date===state.hrDay) o.selected=true;
+      pick.appendChild(o);
+    });
+    pick.addEventListener("change",function(){ state.hrDay=pick.value; render(); });
+    c5.head.insertBefore(pick,c5.head.querySelector(".tblbtn"));
+    var day=hrDays.filter(function(d){return d.date===state.hrDay;})[0];
+    // One point per minute. Readings are joined across gaps of up to 15 minutes
+    // (the watch samples every 1-5 min); anything longer stays a real gap.
+    var MAXGAP=15, minutes=[], pts=[], src=day.hrSeries, j=0;
+    for(var m=0;m<1440;m++){
+      minutes.push(m);
+      while(j+1<src.length&&src[j+1][0]<=m) j++;
+      var a=src[j], b=src[j+1];
+      var v=null;
+      if(a&&a[0]===m) v=a[1];
+      else if(a&&b&&a[0]<m&&b[0]>m&&b[0]-a[0]<=MAXGAP)
+        v=a[1]+(b[1]-a[1])*((m-a[0])/(b[0]-a[0]));
+      pts.push([0,v===null?null:Math.round(v)]);
+    }
+    lineChart(c5.body,minutes.map(function(m){return fmtClock(m);}),
+      [{name:"Heart rate",color:"var(--s1)",pts:pts}],
+      {height:230,endLabel:false,vfmt:function(v){return Math.round(v)+" bpm";},
+       xlabel:function(i){return fmtClock(minutes[i]);},labelEvery:60});
+    table(c5.table,["Time","bpm"],day.hrSeries.map(function(p){
+      return [fmtClock(p[0]),p[1]];}),{scroll:true});
+  } else {
+    c5.body.appendChild(el("div",{class:"empty"},"No intraday heart-rate data in the selected range."));
+  }
+
+  // manual spot checks
+  var spots=DATA.hrSpot.filter(function(s){
+    return days.some(function(d){return s.time.indexOf(d.date)===0;});
+  });
+  var g4=el("div",{class:"grid"}); root.appendChild(g4);
+  var c6=card(g4,"c12","Manual measurements","Readings you triggered by hand on the watch.");
+  if(spots.length)
+    table(c6.body,["When","bpm"],spots.map(function(s){
+      return [fmtDateFull(s.time.slice(0,10))+" "+s.time.slice(11,16),s.hr];}),{scroll:true});
+  else c6.body.appendChild(el("div",{class:"empty"},"No manual readings in the selected range."));
+}
+
+/* ======================================================================
+   TAB: sleep
+   ====================================================================== */
+function renderSleep(root){
+  var days=sel(), pr=prev(days);
+  var ws=days.filter(function(d){return d.sleep;});
+  var prs=pr.filter(function(d){return d.sleep;});
+
+  var g0=el("div",{class:"grid"}); root.appendChild(g0);
+  tile(g0,"c3","Average sleep",fmtDur(mean(ws.map(function(d){return d.sleep.total;}))),null,
+    Object.assign({spark:days.map(function(d){return d.sleep?d.sleep.total:null;}),
+      sparkColor:"var(--sleep-rem)"},
+      deltaOpts(ws.map(function(d){return d.sleep.total;}),prs.map(function(d){return d.sleep.total;}))));
+  tile(g0,"c3","Deep sleep",fmtDur(mean(ws.map(function(d){return d.sleep.deep;}))),null,
+    {sub:Math.round(mean(ws.map(function(d){return d.sleep.total?d.sleep.deep/d.sleep.total*100:null;}))||0)+"% of sleep"});
+  tile(g0,"c3","REM sleep",fmtDur(mean(ws.map(function(d){return d.sleep.rem;}))),null,
+    {sub:Math.round(mean(ws.map(function(d){return d.sleep.total?d.sleep.rem/d.sleep.total*100:null;}))||0)+"% of sleep"});
+  var eff=mean(ws.map(function(d){return d.sleep.eff;}));
+  tile(g0,"c3","Sleep efficiency",eff===null?"–":Math.round(eff),"%",
+    {sub:"time asleep ÷ time in bed"});
+
+  var g0b=el("div",{class:"grid"}); root.appendChild(g0b);
+  var beds=ws.map(function(d){return d.sleep.bedMin;});
+  var wakes=ws.map(function(d){return d.sleep.wakeMin;});
+  var rangeNote=function(v){
+    return v.length? "earliest "+fmtClock(Math.min.apply(null,v))+
+                     " · latest "+fmtClock(Math.max.apply(null,v)) : "no nights in range";
+  };
+  tile(g0b,"c4","Typical bedtime",fmtClock(mean(beds)),null,{sub:rangeNote(beds)});
+  tile(g0b,"c4","Typical wake-up",fmtClock(mean(wakes)),null,{sub:rangeNote(wakes)});
+  var debt=sum(ws.map(function(d){return SLEEP_GOAL-d.sleep.total;}));
+  tile(g0b,"c4","Sleep balance",(debt>0?"−":"+")+fmtDur(Math.abs(debt)),null,
+    {sub:"against an 8h target over "+ws.length+" night"+(ws.length===1?"":"s")});
+
+  var g1=el("div",{class:"grid"}); root.appendChild(g1);
+  var c1=card(g1,"c7","Nightly sleep stages","Columns are stacked to the night's total time asleep.",{table:true});
+  legend(c1.body,STAGES.map(function(s){return {name:s.name,color:s.color};}));
+  stackedChart(c1.body,days.map(function(d){
+    return {k:fmtDate(d.date),label:fmtDow(d.date)+" "+fmtDateFull(d.date),
+      vals:d.sleep?[d.sleep.deep,d.sleep.rem,d.sleep.light,d.sleep.wake]:[0,0,0,0]};
+  }),STAGES,{goal:SLEEP_GOAL,goalLabel:"8h target",height:240,vfmt:fmtDur,
+      yfmt:hoursTick,tipTotal:function(v){return fmtDur(v);}});
+  table(c1.table,["Day","Date","Asleep","Deep","REM","Light","Awake","Efficiency"],
+    ws.map(function(d){return [fmtDow(d.date),fmtDateFull(d.date),fmtDur(d.sleep.total),
+      fmtDur(d.sleep.deep),fmtDur(d.sleep.rem),fmtDur(d.sleep.light),fmtDur(d.sleep.wake),
+      d.sleep.eff===null||d.sleep.eff===undefined?"–":d.sleep.eff+"%"];}),{scroll:true});
+
+  var c2=card(g1,"c5","Stage mix","The same nights as shares of total sleep.",{table:true});
+  legend(c2.body,STAGES.map(function(s){return {name:s.name,color:s.color};}));
+  stackedChart(c2.body,ws.map(function(d){
+    return {k:fmtDate(d.date),label:fmtDow(d.date)+" "+fmtDateFull(d.date),
+      vals:[d.sleep.deep,d.sleep.rem,d.sleep.light,d.sleep.wake]};
+  }),STAGES,{pct:true,height:240,yfmt:function(v){return Math.round(v)+"%";}});
+  table(c2.table,["Date","Deep %","REM %","Light %","Awake %"],ws.map(function(d){
+    var t=d.sleep.total+d.sleep.wake||1;
+    return [fmtDateFull(d.date),Math.round(d.sleep.deep/t*100)+"%",
+      Math.round(d.sleep.rem/t*100)+"%",Math.round(d.sleep.light/t*100)+"%",
+      Math.round(d.sleep.wake/t*100)+"%"];}));
+
+  var g2=el("div",{class:"grid"}); root.appendChild(g2);
+  var c3=card(g2,"c7","Sleep schedule",
+    "Bedtime to wake-up for each night, on a clock running from 18:00 to 12:00.",{table:true});
+  if(ws.length){
+    timelineChart(c3.body,ws.map(function(d){
+      var s=d.sleep.bedMin+1440, e=d.sleep.wakeMin+1440;
+      if(e<=s) e=s+d.sleep.inBed;
+      return {label:fmtDow(d.date)+" "+fmtDate(d.date),
+        segs:[{s:s,e:e,color:"var(--sleep-rem)",
+          tip:{title:fmtDow(d.date)+" "+fmtDateFull(d.date),
+            rows:[{color:"var(--sleep-rem)",value:fmtClock(d.sleep.bedMin)+" → "+fmtClock(d.sleep.wakeMin),name:"in bed"},
+                  {color:"var(--sleep-deep)",value:fmtDur(d.sleep.total),name:"asleep"},
+                  {value:(d.sleep.eff||"–")+"%",name:"efficiency"}]}}]};
+    }),{domain:[1080,2160],tickEvery:120,left:78,rowH:18});
+  } else c3.body.appendChild(el("div",{class:"empty"},"No sleep sessions in the selected range."));
+  table(c3.table,["Date","Bedtime","Wake","In bed","Asleep","Efficiency"],ws.map(function(d){
+    return [fmtDateFull(d.date),fmtClock(d.sleep.bedMin),fmtClock(d.sleep.wakeMin),
+      fmtDur(d.sleep.inBed),fmtDur(d.sleep.total),
+      d.sleep.eff===null||d.sleep.eff===undefined?"–":d.sleep.eff+"%"];}));
+
+  var c4=card(g2,"c5","Sleep and the next day",
+    "Each dot is one night: how long you slept, and the steps you took the day after.",{table:true});
+  var pairs=[];
+  ws.forEach(function(d){
+    if(d.steps>0) pairs.push({x:d.sleep.total,y:d.steps,
+      label:"Woke "+fmtDow(d.date)+" "+fmtDateFull(d.date)});
+  });
+  scatterChart(c4.body,pairs,{color:"var(--s1)",height:240,
+    xfmt:function(v){return fmtDur(v);},xname:"slept",yname:"steps that day",
+    xtitle:"Time asleep",yfmt:fmtCompact});
+  table(c4.table,["Woke on","Asleep","Steps that day"],pairs.map(function(p){
+    return [p.label.replace("Woke ",""),fmtDur(p.x),fmtInt(p.y)];}));
+
+  // one night detail
+  var g3=el("div",{class:"grid"}); root.appendChild(g3);
+  var hn=days.filter(function(d){return d.hypno&&d.hypno.length;});
+  var hrCount=function(d){
+    var n=0; d.hypno.forEach(function(p){ if(p[2]!==null&&p[2]!==undefined) n++; });
+    return n;
+  };
+  var c5=card(g3,"c12","One night in detail","Minute-by-minute stages for the chosen night.",{table:true});
+  if(hn.length){
+    if(!state.sleepDay||!hn.some(function(d){return d.date===state.sleepDay;})){
+      // prefer the most recent night whose heart rate was actually recorded
+      var rich=hn.filter(function(d){ return hrCount(d)>=d.hypno.length*0.5; });
+      state.sleepDay=(rich.length?rich:hn)[(rich.length?rich:hn).length-1].date;
+    }
+    var pick=el("select",{class:"ctl","aria-label":"Night"});
+    hn.forEach(function(d){
+      var o=el("option",{value:d.date},"Night ending "+fmtDow(d.date)+" "+fmtDateFull(d.date));
+      if(d.date===state.sleepDay) o.selected=true;
+      pick.appendChild(o);
+    });
+    pick.addEventListener("change",function(){ state.sleepDay=pick.value; render(); });
+    c5.head.insertBefore(pick,c5.head.querySelector(".tblbtn"));
+    var n=hn.filter(function(d){return d.date===state.sleepDay;})[0];
+    legend(c5.body,STAGES.map(function(s){return {name:s.name,color:s.color};}));
+    hypnoChart(c5.body,n.hypno.map(function(p){return [p[0],p[1]];}),n.hypnoStart,STAGES);
+    var raw=n.hypno.map(function(p){return (p[2]===null||p[2]===undefined)?null:p[2];});
+    var hrpts=raw.map(function(v,i){
+      if(v!==null) return [0,v];
+      var a=i-1; while(a>=0&&raw[a]===null) a--;
+      var b=i+1; while(b<raw.length&&raw[b]===null) b++;
+      if(a<0||b>=raw.length||b-a>6) return [0,null];   // real gap, leave it open
+      return [0,Math.round(raw[a]+(raw[b]-raw[a])*((i-a)/(b-a)))];
+    });
+    if(hrCount(n)>=20){
+      c5.body.appendChild(el("p",{class:"note"},"Heart rate through the same night"));
+      lineChart(c5.body,n.hypno.map(function(p){return fmtClock(n.hypnoStart+p[0]);}),
+        [{name:"Heart rate",color:"var(--s8)",pts:hrpts}],
+        {height:150,endLabel:false,left:56,vfmt:function(v){return Math.round(v)+" bpm";},
+         xlabel:function(i){return fmtClock(n.hypnoStart+n.hypno[i][0]);},labelEvery:64});
+    } else {
+      c5.body.appendChild(el("div",{class:"empty"},
+        "The watch logged heart rate for only "+hrCount(n)+" minute"+(hrCount(n)===1?"":"s")+
+        " of this night, too little to plot."));
+    }
+    var counts=[0,0,0,0];
+    n.hypno.forEach(function(p){ counts[p[1]]++; });
+    table(c5.table,["Stage","Minutes","Share"],STAGES.map(function(s,i){
+      return [s.name,fmtDur(counts[i]),Math.round(counts[i]/n.hypno.length*100)+"%"];}));
+  } else {
+    c5.body.appendChild(el("div",{class:"empty"},
+      "No minute-level sleep data in the selected range. Zepp keeps this detail for roughly the last week of each export."));
+  }
+}
+
+/* ======================================================================
+   TAB: workouts
+   ====================================================================== */
+function renderWorkouts(root){
+  var days=sel();
+  var dates={}; days.forEach(function(d){ dates[d.date]=true; });
+  var ses=DATA.sport.filter(function(s){ return dates[s.date]; });
+
+  var g0=el("div",{class:"grid"}); root.appendChild(g0);
+  tile(g0,"c3","Sessions",fmtInt(ses.length),null,{sub:"in the selected range"});
+  tile(g0,"c3","Training time",fmtDur(sum(ses.map(function(s){return s.dur/60;}))),null,
+    {sub:ses.length?"avg "+fmtDur(mean(ses.map(function(s){return s.dur/60;}))):"–"});
+  tile(g0,"c3","Calories",fmtCompact(sum(ses.map(function(s){return s.cal;}))),"kcal",
+    {sub:ses.length?"avg "+fmtInt(mean(ses.map(function(s){return s.cal;})))+" per session":"–"});
+  tile(g0,"c3","Distance",fmtKm(sum(ses.map(function(s){return s.dist;}))),"km",
+    {sub:"where the session recorded one"});
+
+  if(!ses.length){
+    var c=card(root,"c12","Workouts","");
+    c.body.appendChild(el("div",{class:"empty"},"No workouts in the selected range."));
+    return;
+  }
+
+  var g1=el("div",{class:"grid"}); root.appendChild(g1);
+  var byType={};
+  ses.forEach(function(s){
+    if(!byType[s.typeName]) byType[s.typeName]={n:0,cal:0,dur:0,dist:0};
+    var t=byType[s.typeName];
+    t.n++; t.cal+=s.cal; t.dur+=s.dur/60; t.dist+=s.dist;
+  });
+  var typeRows=Object.keys(byType).map(function(k){
+    return {k:k,v:byType[k].cal,t:byType[k]};
+  }).sort(function(a,b){return b.v-a.v;});
+
+  var c1=card(g1,"c6","Calories by activity","Total energy burned, grouped by the watch's activity type.",{table:true});
+  hbarChart(c1.body,typeRows.map(function(r){
+    return {k:r.k,v:r.v,tip:[
+      {color:"var(--s2)",value:fmtInt(r.v)+" kcal",name:"total"},
+      {color:"var(--s2)",value:r.t.n+" session"+(r.t.n===1?"":"s"),name:""},
+      {color:"var(--s2)",value:fmtDur(r.t.dur),name:"time"}]};
+  }),{color:"var(--s2)",vfmt:function(v){return fmtInt(v)+" kcal";},left:120});
+  table(c1.table,["Activity","Sessions","Time","Distance (km)","kcal"],
+    typeRows.map(function(r){ return [r.k,r.t.n,fmtDur(r.t.dur),
+      r.t.dist?fmtKm(r.t.dist):"–",fmtInt(r.t.cal)];}));
+
+  var c2=card(g1,"c6","Training time per day","Minutes of logged workouts each day.",{table:true});
+  columnChart(c2.body,days.map(function(d){
+    return {k:fmtDate(d.date),label:fmtDow(d.date)+" "+fmtDateFull(d.date),v:d.sportMin,d:d};
+  }),{color:"var(--s2)",height:200,vfmt:fmtDur,yfmt:function(v){return Math.round(v)+"m";},
+      tipRows:function(r){
+        if(!r.d.sports.length) return [{value:"rest day",name:""}];
+        return r.d.sports.map(function(s){
+          return {color:"var(--s2)",value:fmtDur(s.dur/60),name:s.typeName};});
+      }});
+  table(c2.table,["Date","Sessions","Minutes","kcal"],days.map(function(d){
+    return [fmtDateFull(d.date),d.sports.length,d.sportMin,d.sportCal];}),{scroll:true});
+
+  var g2=el("div",{class:"grid"}); root.appendChild(g2);
+  var c3=card(g2,"c12","Every session","");
+  table(c3.body,["Date","Start","Activity","Duration","Distance (km)","Avg pace","kcal"],
+    ses.slice().reverse().map(function(s){
+      var pace="–";
+      if(s.avgPace){
+        var secPerKm=Math.round(s.avgPace*1000);
+        pace=Math.floor(secPerKm/60)+":"+pad2(secPerKm%60)+" /km";
+      }
+      return [fmtDateFull(s.date),fmtClock(s.startMin),s.typeName,fmtDur(s.dur/60),
+        s.dist?fmtKm(s.dist):"–",pace,fmtInt(s.cal)];
+    }),{scroll:true});
+
+  var g3=el("div",{class:"grid"}); root.appendChild(g3);
+  var c4=card(g3,"c12","Sessions on the clock","When each workout happened during the day.",{table:false});
+  var wdays=days.filter(function(d){return d.sports.length;});
+  timelineChart(c4.body,wdays.map(function(d){
+    return {label:fmtDow(d.date)+" "+fmtDate(d.date),
+      segs:d.sports.map(function(s){
+        return {s:s.startMin,e:s.startMin+s.dur/60,color:"var(--s2)",
+          tip:{title:s.typeName+" · "+fmtClock(s.startMin),
+            rows:[{color:"var(--s2)",value:fmtDur(s.dur/60),name:"duration"},
+                  {color:"var(--s2)",value:fmtInt(s.cal)+" kcal",name:"energy"}].concat(
+                  s.dist?[{color:"var(--s3)",value:fmtKm(s.dist)+" km",name:"distance"}]:[])}};
+      })};
+  }),{left:78});
+}
+
+/* ======================================================================
+   TAB: body
+   ====================================================================== */
+function renderBody(root){
+  var b=DATA.body, u=DATA.user;
+  var latest=b.length?b[b.length-1]:null;
+
+  var g0=el("div",{class:"grid"}); root.appendChild(g0);
+  tile(g0,"c3","Weight",latest&&latest.weight?latest.weight.toFixed(1):"–","kg",
+    {sub:latest?"measured "+fmtDateFull(latest.date):"no measurement yet"});
+  var bmi=latest&&latest.bmi?latest.bmi:null;
+  tile(g0,"c3","Body mass index",bmi?bmi.toFixed(1):"–",null,{sub:bmiLabel(bmi)});
+  tile(g0,"c3","Height",u.height?u.height.toFixed(0):"–","cm",{sub:"from your profile"});
+  tile(g0,"c3","Age",u.age||"–","years",{sub:u.birthday?"born "+u.birthday:""});
+
+  var g1=el("div",{class:"grid"}); root.appendChild(g1);
+  var c1=card(g1,"c6","Weight over time","",{table:true});
+  if(b.length>1){
+    lineChart(c1.body,b.map(function(x){return fmtDate(x.date);}),
+      [{name:"Weight",color:"var(--s1)",pts:b.map(function(x){return [0,x.weight];})}],
+      {height:200,vfmt:function(v){return v.toFixed(1)+" kg";},
+       xlabel:function(i){return fmtDateFull(b[i].date);}});
+  } else {
+    c1.body.appendChild(el("div",{class:"empty"},
+      b.length?"Only one weight measurement so far — a trend needs at least two."
+             :"No weight measurements in the export."));
+  }
+  table(c1.table,["When","Weight (kg)","BMI"],b.map(function(x){
+    return [x.time,x.weight===null?"–":x.weight.toFixed(1),x.bmi===null?"–":x.bmi.toFixed(1)];}));
+
+  var c2=card(g1,"c6","Where your BMI sits","Scale runs from underweight to obese.");
+  if(bmi){
+    var bands=[{n:"Under",to:18.5,c:"var(--o1)"},{n:"Healthy",to:25,c:"var(--good)"},
+               {n:"Over",to:30,c:"var(--warning)"},{n:"Obese",to:40,c:"var(--critical)"}];
+    var bar=el("div"); bar.style.display="flex"; bar.style.gap="2px"; bar.style.marginTop="14px";
+    var prevTo=12;
+    bands.forEach(function(bd){
+      var seg=el("div");
+      seg.style.flex=(bd.to-prevTo)+" 0 0";
+      seg.style.height="12px"; seg.style.background=bd.c;
+      seg.style.borderRadius="4px";
+      bar.appendChild(seg);
+      prevTo=bd.to;
+    });
+    c2.body.appendChild(bar);
+    var marker=el("div");
+    marker.style.position="relative"; marker.style.height="22px";
+    var pos=Math.max(0,Math.min(1,(bmi-12)/(40-12)))*100;
+    var dot=el("div");
+    dot.style.position="absolute"; dot.style.left="calc("+pos+"% - 6px)";
+    dot.style.width="12px"; dot.style.height="12px"; dot.style.borderRadius="50%";
+    dot.style.background="var(--text-primary)";
+    dot.style.border="2px solid var(--surface-1)";
+    dot.style.marginTop="-4px";
+    marker.appendChild(dot);
+    c2.body.appendChild(marker);
+    var lbl=el("div",{class:"legend"});
+    bands.forEach(function(bd,i){
+      var s=el("span",{class:"k"});
+      var ic=el("i"); ic.style.background=bd.c; s.appendChild(ic);
+      s.appendChild(document.createTextNode(bd.n+" (<"+bd.to+")"));
+      lbl.appendChild(s);
+    });
+    c2.body.appendChild(lbl);
+    c2.body.appendChild(el("p",{class:"note"},
+      "BMI "+bmi.toFixed(1)+" — "+bmiLabel(bmi)+". At "+(u.height||0).toFixed(0)+
+      " cm, the healthy range is about "+
+      (18.5*Math.pow((u.height||0)/100,2)).toFixed(0)+"–"+
+      (25*Math.pow((u.height||0)/100,2)).toFixed(0)+" kg."));
+  } else {
+    c2.body.appendChild(el("div",{class:"empty"},"No BMI recorded."));
+  }
+
+  var g2=el("div",{class:"grid"}); root.appendChild(g2);
+  var comp=["fatRate","muscleRate","bodyWaterRate","boneMass","metabolism","visceralFat"];
+  var compNames={fatRate:"Body fat",muscleRate:"Muscle",bodyWaterRate:"Body water",
+    boneMass:"Bone mass",metabolism:"Basal metabolism",visceralFat:"Visceral fat"};
+  var have=latest&&comp.some(function(k){return latest[k]!==null&&latest[k]!==undefined;});
+  var c3=card(g2,"c6","Body composition","");
+  if(have){
+    var dl=el("dl",{class:"kv"});
+    comp.forEach(function(k){
+      if(latest[k]===null||latest[k]===undefined) return;
+      dl.appendChild(el("dt",null,compNames[k]));
+      dl.appendChild(el("dd",null,latest[k]));
+    });
+    c3.body.appendChild(dl);
+  } else {
+    c3.body.appendChild(el("div",{class:"empty"},
+      "Your scale didn't report body composition. These fields fill in automatically if you pair a smart scale with Zepp."));
+  }
+
+  var c4=card(g2,"c6","Body measurements","Waist, chest, hip and limb sizes entered in the app.");
+  if(DATA.health.length){
+    table(c4.body,["Date","Waist","Chest","Hip","Thigh","Calf","Arm"],
+      DATA.health.map(function(h){
+        return [fmtDateFull(h.date),h.waist,h.chest,h.hip,h.thigh,h.calf,h.arm];}));
+  } else {
+    c4.body.appendChild(el("div",{class:"empty"},
+      "No measurements recorded. Zepp stores these only if you type them into the app."));
+  }
+
+  var g3=el("div",{class:"grid"}); root.appendChild(g3);
+  var c5=card(g3,"c12","Profile","Taken from the watch account in the export.");
+  var dl2=el("dl",{class:"kv"});
+  [["Name",u.name],["Gender",u.gender],["Born",u.birthday||"–"],
+   ["Age",u.age?u.age+" years":"–"],["Height",u.height?u.height.toFixed(0)+" cm":"–"],
+   ["Profile weight",u.weight?u.weight.toFixed(1)+" kg":"–"],
+   ["Estimated max HR",u.maxHr+" bpm"]].forEach(function(p){
+    dl2.appendChild(el("dt",null,p[0]));
+    dl2.appendChild(el("dd",null,p[1]));
+  });
+  c5.body.appendChild(dl2);
+}
+function bmiLabel(b){
+  if(!b) return "–";
+  if(b<18.5) return "Underweight";
+  if(b<25) return "Healthy weight";
+  if(b<30) return "Overweight";
+  return "Obese";
+}
+
+/* ======================================================================
+   TAB: data
+   ====================================================================== */
+var KINDS=["ACTIVITY","ACTIVITY_MINUTE","ACTIVITY_STAGE","HEARTRATE_AUTO","HEARTRATE",
+           "SLEEP","SLEEP_MINUTE","SPORT","BODY","HEALTH_DATA","USER"];
+
+function renderData(root){
+  var g0=el("div",{class:"grid"}); root.appendChild(g0);
+  tile(g0,"c3","Exports loaded",DATA.weeks.length,null,{sub:"folders matching w_DDMM_DDMM"});
+  tile(g0,"c3","Days covered",DATA.totals.days,null,
+    {sub:fmtDateFull(ALL[0].date)+" → "+fmtDateFull(ALL[ALL.length-1].date)});
+  tile(g0,"c3","Rows parsed",fmtCompact(DATA.totals.records),null,{sub:"across every CSV"});
+  tile(g0,"c3","Built",DATA.generated.slice(11),null,{sub:"on "+DATA.generated.slice(0,10)});
+
+  var g1=el("div",{class:"grid"}); root.appendChild(g1);
+  var c1=card(g1,"c12","Each export folder","Rows found per file type, folder by folder.");
+  table(c1.body,["Folder","Dates","Days","UTC offset"].concat(KINDS.map(function(k){return k.replace(/_/g," ").toLowerCase();})),
+    DATA.weeks.map(function(w){
+      return [w.folder,(w.start?fmtDate(w.start)+" – "+fmtDate(w.end):"–"),w.days,
+              (w.tz===null||w.tz===undefined)?"–":((w.tz>0?"+":"")+(w.tz/60).toFixed(1)+" h")]
+        .concat(KINDS.map(function(k){ return w.counts[k]?fmtInt(w.counts[k]):"–"; }));
+    }));
+
+  var g2=el("div",{class:"grid"}); root.appendChild(g2);
+  var c2=card(g2,"c12","What each day actually contains",
+    "A filled cell means that day carries data of that kind. Gaps are normal — Zepp only keeps minute-level detail for the most recent days of each export.");
+  var kinds=[
+    {n:"Steps",f:function(d){return d.steps>0;}},
+    {n:"Minute steps",f:function(d){return d.stepSeries.length>0;}},
+    {n:"Movement bouts",f:function(d){return d.bouts.length>0;}},
+    {n:"Heart rate",f:function(d){return !!d.hr;}},
+    {n:"Sleep summary",f:function(d){return !!d.sleep;}},
+    {n:"Sleep minutes",f:function(d){return !!(d.hypno&&d.hypno.length);}},
+    {n:"Workouts",f:function(d){return d.sports.length>0;}}
+  ];
+  var cells=kinds.map(function(k){ return ALL.map(function(d){ return k.f(d)?1:0; }); });
+  heatmapChart(c2.body,kinds.map(function(k){return k.n;}),
+    ALL.map(function(d){return fmtDate(d.date);}),cells,
+    {max:1,left:110,cellH:18,vfmt:function(v){return v?"present":"missing";},name:""});
+
+  var g2b=el("div",{class:"grid"}); root.appendChild(g2b);
+  var cc=card(g2b,"c12","Clock correction",
+    "Zepp writes some files in local time and others in UTC, and its SLEEP rows are additionally dated a day early. The builder measures the discrepancy instead of assuming it.");
+  if(DATA.clock.sleepOffset===null||DATA.clock.sleepOffset===undefined){
+    cc.body.appendChild(el("div",{class:"empty"},
+      "No night appeared in both SLEEP and SLEEP_MINUTE, so no correction could be measured and every timestamp is left exactly as exported."));
+  } else {
+    var hrs=(DATA.clock.sleepOffset/60);
+    var dl0=el("dl",{class:"kv"});
+    [["Nights used to measure it",DATA.clock.matched],
+     ["SLEEP rows shifted by",(hrs>0?"+":"")+hrs.toFixed(1)+" h"],
+     ["UTC offset applied to SPORT, BODY, HEARTRATE",
+      (DATA.clock.tz>0?"+":"")+(DATA.clock.tz/60).toFixed(1)+" h"]].forEach(function(r){
+      dl0.appendChild(el("dt",null,r[0]));
+      dl0.appendChild(el("dd",null,r[1]));
+    });
+    cc.body.appendChild(dl0);
+    cc.body.appendChild(el("p",{class:"note"},
+      "Checked against the heart rate embedded in SLEEP_MINUTE, which matches HEARTRATE_AUTO minute for minute — so the local-time files are the reference and everything else is aligned to them."));
+  }
+
+  var g3=el("div",{class:"grid"}); root.appendChild(g3);
+  var c3=card(g3,"c12","Adding next week");
+  var ol=el("div");
+  ol.appendChild(el("p",{class:"note"},
+    "1. Export the new week from Zepp and drop the folder into this directory, named like "+
+    DATA.weeks[0].folder+" (w_DDMM_DDMM)."));
+  ol.appendChild(el("p",{class:"note"},
+    "2. Double-click \"Update dashboard.bat\" in this folder — or run: python _build/build_dashboard.py"));
+  ol.appendChild(el("p",{class:"note"},
+    "3. dashboard.html is rewritten with every week merged in. Overlapping days are de-duplicated, the newest export wins, and every chart, range filter and calendar extends itself automatically."));
+  c3.body.appendChild(ol);
+
+  var g4=el("div",{class:"grid"}); root.appendChild(g4);
+  var c4=card(g4,"c12","How the numbers are derived");
+  var notes=[
+    ["Resting heart rate","The mean of the calmest 10% of readings taken during that night's sleep. Where a night wasn't recorded, the 5th percentile of a fully-worn day stands in; days the watch was on for under 10 hours get no figure at all."],
+    ["Active calories","The watch's own daily figure — energy burned above resting, not total intake."],
+    ["Sleep night","A night is labelled by the morning it ends on, matching the watch's own convention."],
+    ["Sleep efficiency","Minutes asleep divided by minutes in bed, including the awake minutes in between."],
+    ["Heart-rate zones","Boundaries at 50 / 70 / 80 / 90% of an estimated maximum of "+DATA.user.maxHr+
+     " bpm (220 − age). Each reading is weighted by the gap to the next one, capped at 10 minutes, so irregular sampling doesn't distort the totals."],
+    ["Part-worn days","A day with under 10 hours of heart-rate coverage is charted but left out of the step averages, so a day you put the watch on at midnight can't drag the numbers down."],
+    ["Timestamps","Zepp mixes local time and UTC between files, and misdates its SLEEP rows. See the clock-correction card above for the shift measured from your own data."]
+  ];
+  var dl=el("dl",{class:"kv"});
+  notes.forEach(function(n){
+    var dt=el("dt",null,n[0]);
+    var dd=el("dd",null,n[1]);
+    dd.style.textAlign="left"; dd.style.fontWeight="400";
+    dd.style.color="var(--text-secondary)"; dd.style.fontVariantNumeric="normal";
+    dl.appendChild(dt); dl.appendChild(dd);
+  });
+  dl.style.gridTemplateColumns="160px 1fr";
+  c4.body.appendChild(dl);
+}
+
+/* ======================================================================
+   shell
+   ====================================================================== */
+var RANGES=[{k:"all",n:"All"},{k:"7",n:"7 days"},{k:"14",n:"14 days"},
+            {k:"30",n:"30 days"},{k:"90",n:"90 days"}];
+
+function buildShell(){
+  document.getElementById("hdr-name").textContent=DATA.user.name+"'s health dashboard";
+  document.getElementById("hdr-sub").textContent=
+    fmtDateFull(ALL[0].date)+" – "+fmtDateFull(ALL[ALL.length-1].date)+
+    " · "+DATA.weeks.length+" weekly export"+(DATA.weeks.length===1?"":"s")+
+    " · built "+DATA.generated;
+
+  var tabs=document.getElementById("tabs");
+  TABS.forEach(function(t){
+    var b=el("button",{type:"button",role:"tab",id:"tab-"+t.id},t.name);
+    b.setAttribute("aria-selected",t.id===state.tab?"true":"false");
+    b.addEventListener("click",function(){ state.tab=t.id; render(); });
+    tabs.appendChild(b);
+  });
+
+  var seg=document.getElementById("rangeseg");
+  var span=dayIndex(ALL[ALL.length-1].date)-dayIndex(ALL[0].date)+1;
+  RANGES.forEach(function(r){
+    if(r.k!=="all"&&parseInt(r.k,10)>span+7) return;
+    var b=el("button",{type:"button"},r.n);
+    b.setAttribute("aria-pressed",state.range===r.k?"true":"false");
+    b.addEventListener("click",function(){ state.range=r.k; render(); });
+    seg.appendChild(b);
+  });
+
+  var ws=document.getElementById("weeksel");
+  var o=el("option",{value:"all"},"All exports");
+  ws.appendChild(o);
+  DATA.weeks.forEach(function(w){
+    ws.appendChild(el("option",{value:w.folder},w.folder+"  ("+w.label+")"));
+  });
+  ws.addEventListener("change",function(){ state.week=ws.value; render(); });
+
+  var tb=document.getElementById("themebtn");
+  var saved=null;
+  try{ saved=localStorage.getItem("hd-theme"); }catch(e){}
+  if(saved) document.documentElement.setAttribute("data-theme",saved);
+  tb.addEventListener("click",function(){
+    var cur=document.documentElement.getAttribute("data-theme");
+    var isDark=cur? cur==="dark"
+      : window.matchMedia("(prefers-color-scheme: dark)").matches;
+    var next=isDark?"light":"dark";
+    document.documentElement.setAttribute("data-theme",next);
+    try{ localStorage.setItem("hd-theme",next); }catch(e){}
+    redrawAll(true);
+  });
+
+  document.getElementById("foot").textContent=
+    "Generated from "+DATA.weeks.length+" Zepp export folder"+(DATA.weeks.length===1?"":"s")+
+    " in "+DATA.root+". Re-run the builder after adding a week and this page rebuilds itself.";
+}
+
+function render(){
+  TABS.forEach(function(t){
+    var b=document.getElementById("tab-"+t.id);
+    if(b) b.setAttribute("aria-selected",t.id===state.tab?"true":"false");
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("#rangeseg button"),function(b,i){
+    b.setAttribute("aria-pressed",b.textContent===(RANGES.filter(function(r){return r.k===state.range;})[0]||{}).n?"true":"false");
+  });
+
+  var days=sel();
+  var scope=document.getElementById("scopetxt");
+  scope.textContent=days.length
+    ? days.length+" day"+(days.length===1?"":"s")+": "+fmtDateFull(days[0].date)+
+      " – "+fmtDateFull(days[days.length-1].date)
+    : "No days match this filter";
+
+  CHARTS.length=0;
+  var panels=document.getElementById("panels");
+  clear(panels);
+  var tab=TABS.filter(function(t){return t.id===state.tab;})[0];
+  var root=el("div");
+  panels.appendChild(root);
+  if(!days.length&&state.tab!=="data"){
+    var c=card(root,"c12","Nothing selected","");
+    c.body.appendChild(el("div",{class:"empty"},
+      "No days match the current filter. Try widening the range or choosing a different export."));
+  } else {
+    tab.render(root);
+  }
+  requestAnimationFrame(function(){ redrawAll(true); });
+}
+
+/* boot */
+function boot(){
+  if(!DATA||!DATA.days||!DATA.days.length){
+    document.getElementById("panels").appendChild(
+      el("div",{class:"empty"},"No data found. Run the builder with at least one week folder present."));
+    return;
+  }
+  ALL=DATA.days;
+  buildShell();
+  render();
+  var to=null;
+  window.addEventListener("resize",function(){
+    clearTimeout(to);
+    to=setTimeout(function(){ redrawAll(false); },120);
+  });
+}
+/* The self-contained dashboard.html has DATA baked in and starts here. The PWA
+   shell ships the same file with the marker left null; data-loader.js fills
+   window.DATA from IndexedDB and calls __boot() once it has something. */
+window.__boot = boot;
+if(DATA) boot();
+</script>
+<script src="idb-lite.js"></script>
+<script src="data-loader.js"></script>

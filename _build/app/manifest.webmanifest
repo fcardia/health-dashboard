@@ -1,0 +1,27 @@
+{
+  "name": "Smartwatch Health Dashboard",
+  "short_name": "Health",
+  "description": "Your Zepp weekly exports, charted. Import data.json to update.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f9f9f7",
+  "theme_color": "#f9f9f7",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "share_target": {
+    "action": "share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "files": [
+        { "name": "data", "accept": ["application/json", "text/json", ".json"] }
+      ]
+    }
+  }
+}

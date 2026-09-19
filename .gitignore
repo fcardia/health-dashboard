@@ -1,0 +1,24 @@
+# ---------------------------------------------------------------------------
+# This repo is meant to be published (GitHub Pages serves docs/). Everything
+# below is personal health data or built from it, and must never be pushed.
+# Only the shell in docs/ and the sources in _build/ are safe to publish.
+# ---------------------------------------------------------------------------
+
+# Raw Zepp exports - one folder per week
+w_*/
+
+# Built artefacts containing the data itself
+data.json
+dashboard.html
+
+# Belt and braces: never publish a CSV from anywhere in here
+*.csv
+
+# ---------------------------------------------------------------------------
+# Not data, just noise
+# ---------------------------------------------------------------------------
+__pycache__/
+*.pyc
+Thumbs.db
+desktop.ini
+.DS_Store
